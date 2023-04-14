@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use reqwest::header::{ACCEPT, HeaderMap};
 use url::Url;
 
 fn get_credentials() -> anyhow::Result<(Url, String, String)> {
@@ -47,7 +48,8 @@ fn get_credentials() -> anyhow::Result<(Url, String, String)> {
     anyhow::bail!("Hostname not found in .netrc: '{:?}'", nexus_url.host())
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     println!("Hello, world!");
 
     let (nexus_url, user, password) = get_credentials()?;
@@ -55,5 +57,23 @@ fn main() -> anyhow::Result<()> {
     println!("USER:      {user}");
     println!("PASSWORD:  {password}");
 
+
+    // let r=  reqwest::RequestBuilder:: basic_auth(user, Some(password))
+    //     .build();
+    let mut headers = HeaderMap::new();
+    headers.insert(ACCEPT, "application/json".parse()?);
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?;
+
+    let r = client.get("https://oss.sonatype.org/service/local/staging/profile_repositories")
+        .basic_auth(user, Some(password))
+        .build()?;
+    let response = client.execute(r).await?;
+    let s = response.text().await?;
+    println!("response: {s}");
     Ok(())
 }
+
+
+// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories

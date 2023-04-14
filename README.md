@@ -19,3 +19,8 @@ Note: this is just a draft proposal; implementation may be different, the docs g
 Authentication can be done:
 - using environment variable `NEXUS_CLIENT_AUTH` with `<user>:<password>` in it, and `NEXUS_URL` to indicate the instance of Nexus
 - using `~/.netrc` entry, with host `oss.sonatype.org`
+
+## Useful references
+
+* [Uploading to a Staging Repository via REST API](https://support.sonatype.com/hc/en-us/articles/213465868-Uploading-to-a-Staging-Repository-via-REST-API)
+* [Nexus Staging Plugin REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html)
