@@ -1,7 +1,12 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+
+use clap::{Parser, Subcommand};
 use reqwest::header::{ACCEPT, HeaderMap};
+use serde_json::Value;
 use url::Url;
+
+mod model;
 
 fn get_credentials() -> anyhow::Result<(Url, String, String)> {
     let nexus_url = match std::env::var("NEXUS_URL") {
@@ -33,7 +38,6 @@ fn get_credentials() -> anyhow::Result<(Url, String, String)> {
 
     let netrc = netrc_rs::Netrc::parse(s, false).unwrap();
     for machine in &netrc.machines {
-        println!("* {machine:?}");
         match &machine.name {
             None => {}
             Some(name) => {
@@ -48,14 +52,12 @@ fn get_credentials() -> anyhow::Result<(Url, String, String)> {
     anyhow::bail!("Hostname not found in .netrc: '{:?}'", nexus_url.host())
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    println!("Hello, world!");
-
+async fn staging_repos_list() -> anyhow::Result<()> {
+// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
     let (nexus_url, user, password) = get_credentials()?;
-    println!("NEXUS URL: {nexus_url}");
-    println!("USER:      {user}");
-    println!("PASSWORD:  {password}");
+    log::info!("NEXUS URL: {nexus_url}");
+    log::info!("USER:      {user}");
+    log::trace!("PASSWORD:  {password}");
 
 
     // let r=  reqwest::RequestBuilder:: basic_auth(user, Some(password))
@@ -70,10 +72,48 @@ async fn main() -> anyhow::Result<()> {
         .basic_auth(user, Some(password))
         .build()?;
     let response = client.execute(r).await?;
-    let s = response.text().await?;
-    println!("response: {s}");
+    let json = response.json::<Value>().await?;
+    let repos: model::StagingProfileRepositories = serde_json::from_value(json)?;
+    for repo in repos.data {
+        println!("{} profile: '{}' id: '{}' # {}", repo.created, repo.profile_id, repo.repository_id, repo.description);
+        log::debug!("{repo:?}");
+    }
     Ok(())
 }
 
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+    let cli = Cli::parse();
+    match cli.command {
+        Commands::StagingRepoList => {
+            staging_repos_list().await?;
+        }
+        _ => {
+            todo!()
+        }
+    }
 
-// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
+    Ok(())
+}
+
+/// Simple program to greet a person
+#[derive(Parser)]
+#[command(author, version, about, long_about = None, bin_name="nexus")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+// https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
+#[derive(Subcommand)]
+enum Commands {
+    StagingProfileList,
+    StagingRepoList,
+    StagingRepoStart,
+    StagingRepoDrop,
+    StagingRepoPromote,
+    StagingRepoFinish,
+    StagingRepoGet,
+    StagingRepoActivity,
+}

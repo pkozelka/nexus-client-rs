@@ -24,3 +24,4 @@ Authentication can be done:
 
 * [Uploading to a Staging Repository via REST API](https://support.sonatype.com/hc/en-us/articles/213465868-Uploading-to-a-Staging-Repository-via-REST-API)
 * [Nexus Staging Plugin REST API](https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html)
+* [OSS Sonatype upload script](https://github.com/pkozelka/libtorch-bundle/blob/main/upload.sh)
