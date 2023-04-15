@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand};
 use reqwest::header::{ACCEPT, HeaderMap};
 use serde_json::Value;
 use url::Url;
+use crate::model::{StagingProfile, StagingProfileRepository};
 
 mod model;
 
@@ -52,6 +53,35 @@ fn get_credentials() -> anyhow::Result<(Url, String, String)> {
     anyhow::bail!("Hostname not found in .netrc: '{:?}'", nexus_url.host())
 }
 
+async fn staging_profile_list() -> anyhow::Result<()> {
+// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
+    let (nexus_url, user, password) = get_credentials()?;
+    log::info!("NEXUS URL: {nexus_url}");
+    log::info!("USER:      {user}");
+    log::trace!("PASSWORD:  {password}");
+
+
+    // let r=  reqwest::RequestBuilder:: basic_auth(user, Some(password))
+    //     .build();
+    let mut headers = HeaderMap::new();
+    headers.insert(ACCEPT, "application/json".parse()?);
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?;
+
+    let r = client.get("https://oss.sonatype.org/service/local/staging/profiles")
+        .basic_auth(user, Some(password))
+        .build()?;
+    let response = client.execute(r).await?;
+    let json = response.json::<Value>().await?;
+    let repos: model::ListOfObjects<StagingProfile> = serde_json::from_value(json)?;
+    for profile in repos.data {
+        println!("profile id: '{}' name: '{}' mode: '{}' target repo: {}", profile.id, profile.name, profile.mode, profile.promotion_target_repository);
+        log::debug!("{profile:?}");
+    }
+    Ok(())
+}
+
 async fn staging_repos_list() -> anyhow::Result<()> {
 // curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
     let (nexus_url, user, password) = get_credentials()?;
@@ -73,7 +103,7 @@ async fn staging_repos_list() -> anyhow::Result<()> {
         .build()?;
     let response = client.execute(r).await?;
     let json = response.json::<Value>().await?;
-    let repos: model::StagingProfileRepositories = serde_json::from_value(json)?;
+    let repos: model::ListOfObjects<StagingProfileRepository> = serde_json::from_value(json)?;
     for repo in repos.data {
         println!("{} profile: '{}' id: '{}' # {}", repo.created, repo.profile_id, repo.repository_id, repo.description);
         log::debug!("{repo:?}");
@@ -86,7 +116,10 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     match cli.command {
-        Commands::StagingRepoList => {
+        Commands::StagingProfiles => {
+            staging_profile_list().await?;
+        }
+        Commands::StagingRepos => {
             staging_repos_list().await?;
         }
         _ => {
@@ -108,8 +141,8 @@ struct Cli {
 // https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
 #[derive(Subcommand)]
 enum Commands {
-    StagingProfileList,
-    StagingRepoList,
+    StagingProfiles,
+    StagingRepos,
     StagingRepoStart,
     StagingRepoDrop,
     StagingRepoPromote,

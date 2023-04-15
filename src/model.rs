@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -9,8 +10,8 @@ pub struct PromoteRequest {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StagingProfileRepositories {
-    pub data: Vec<StagingProfileRepository>,
+pub struct ListOfObjects<T> {
+    pub data: Vec<T>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,4 +41,41 @@ pub struct StagingProfileRepository {
     pub release_repository_name: String,
     pub notifications: i64,
     pub transitioning: bool,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StagingProfile {
+    #[serde(rename = "resourceURI")]
+    pub resource_uri: String,
+    pub id: String,
+    pub name: String,
+    pub repository_template_id: String,
+    pub repository_type: String,
+    pub repository_target_id: String,
+    pub in_progress: bool,
+    pub order: i64,
+    #[serde(rename = "deployURI")]
+    pub deploy_uri: String,
+    pub target_groups: Vec<String>,
+    pub finish_notify_roles: Vec<Value>,
+    pub promotion_notify_roles: Vec<Value>,
+    pub drop_notify_roles: Vec<Value>,
+    pub close_rule_sets: Vec<String>,
+    pub promote_rule_sets: Vec<Value>,
+    pub promotion_target_repository: String,
+    pub mode: String,
+    pub finish_notify_creator: bool,
+    pub promotion_notify_creator: bool,
+    pub drop_notify_creator: bool,
+    pub auto_staging_disabled: bool,
+    pub repositories_searchable: bool,
+    pub properties: Properties,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Properties {
+    #[serde(rename = "@class")]
+    pub class: String,
 }
