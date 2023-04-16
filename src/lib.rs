@@ -20,6 +20,7 @@ type Extractor<A> = dyn FnOnce(&str) -> anyhow::Result<A>;
 pub struct NexusRequest<A> {
     method: Method,
     url_suffix: String,
+    body: String,
     content_type: &'static str,
     accept: &'static str,
     extractor: Box<Extractor<A>>,
@@ -32,19 +33,23 @@ impl<A: DeserializeOwned + 'static> NexusRequest<A> {
         Self {
             method,
             url_suffix,
+            body: "".to_string(),
             content_type: APPLICATION_JSON,
             accept: APPLICATION_JSON,
             extractor: Box::new(extractor),
         }
     }
 
-    pub fn xml_xml(method: Method, url_suffix: String) -> Self {
+    pub fn xml_xml<F>(method: Method, url_suffix: String, body: String, extractor: F) -> Self
+        where F: FnOnce(&str) -> anyhow::Result<A> + 'static
+    {
         Self {
             method,
             url_suffix,
+            body,
             content_type: APPLICATION_XML,
             accept: APPLICATION_XML,
-            extractor: Box::new(json_extract_data),
+            extractor: Box::new(extractor),
         }
     }
 }
@@ -104,7 +109,22 @@ impl StagingProfiles {
         )
     }
 
-    pub fn start(_profile_id_key: &str, _description: &str) -> NexusRequest<String> { todo!() }
+    pub fn start(profile_id_key: &str, description: &str) -> NexusRequest<String> {
+        let _body = model::PromoteRequestData { //todo
+            staged_repository_id: None,
+            description: (!description.is_empty()).then(|| description.to_string()),
+            target_repository_id: None,
+        };
+        NexusRequest::xml_xml(Method::POST,
+                              format!("/service/local/staging/profiles/{profile_id_key}/start"),
+            format!(r#"<promoteRequest>
+    <data>
+        <description>{description}</description>
+    </data>
+</promoteRequest>"#),
+            |text| Ok(text.to_string())
+        )
+    }
 
     pub fn drop(_staged_repository_id: &str, _repository_id: &str) -> NexusRequest<()> { todo!() }
 
@@ -160,6 +180,7 @@ impl NexusClient {
             .basic_auth(&self.credentials.0, Some(&self.credentials.1))
             .header(ACCEPT, request.accept)
             .header(CONTENT_TYPE, request.content_type)
+            .body(request.body)
             .send().await?;
         Ok(NexusResponse {
             raw_response,
