@@ -1,7 +1,7 @@
 use anyhow::Error;
 
 use reqwest::header::{ACCEPT, CONTENT_TYPE, HeaderMap, USER_AGENT};
-use reqwest::Method;
+use reqwest::{Method, Response};
 use serde::de::DeserializeOwned;
 use url::Url;
 
@@ -15,29 +15,48 @@ mod auth;
 const APPLICATION_JSON: &str = "application/json";
 const APPLICATION_XML: &str = "application/xml";
 
+type Extractor<A> = dyn FnOnce(&str) -> anyhow::Result<A>;
+
 pub struct NexusRequest<A> {
     method: Method,
     url_suffix: String,
     content_type: &'static str,
     accept: &'static str,
-    extractor: Box<dyn FnOnce(&str) -> anyhow::Result<A>>,
+    extractor: Box<Extractor<A>>,
 }
 
 pub struct NexusResponse<A>
 {
     raw_response: reqwest::Response,
-    extractor: Box<dyn FnOnce(&str) -> anyhow::Result<A>>,
+    extractor: Box<Extractor<A>>,
 }
 
 impl<A: DeserializeOwned> NexusResponse<A> {
     pub async fn parsed(self) -> anyhow::Result<A> {
-        // TODO: somehow, make this code dependent on A
-        let text = self.raw_response.text().await?;
+        let response = Self::check_status(self.raw_response).await?;
+        let text = response.text().await?;
         (self.extractor)(&text)
+    }
+
+    pub async fn text(self) -> anyhow::Result<String> {
+        let response = Self::check_status(self.raw_response).await?;
+        Ok(response.text().await?)
+    }
+
+    async fn check_status(response: Response) -> anyhow::Result<Response> {
+        let status = response.status();
+        if !status.is_success() {
+            let text = response.text().await?;
+            anyhow::bail!("HTTP {} {}: {text}",
+                status.as_str(),
+                status.canonical_reason().unwrap_or("")
+            );
+        }
+        Ok(response)
     }
 }
 
-fn parse_response_data<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
+fn extract_json_list<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
     let resp: NexusResponseData = serde_json::from_str(&text)?;
     Ok(serde_json::from_value(resp.data)?)
 }
@@ -59,13 +78,15 @@ impl StagingProfiles {
 }
 
 impl<A: DeserializeOwned + 'static> NexusRequest<A> {
-    pub fn json_json(method: Method, url_suffix: String) -> Self {
+    pub fn json_json<F>(method: Method, url_suffix: String, extractor: F) -> Self
+        where F: FnOnce(&str) -> anyhow::Result<A> + 'static
+    {
         Self {
             method,
             url_suffix,
             content_type: APPLICATION_JSON,
             accept: APPLICATION_JSON,
-            extractor: Box::new(parse_response_data),
+            extractor: Box::new(extractor),
         }
     }
 
@@ -75,7 +96,7 @@ impl<A: DeserializeOwned + 'static> NexusRequest<A> {
             url_suffix,
             content_type: APPLICATION_XML,
             accept: APPLICATION_XML,
-            extractor: Box::new(parse_response_data),
+            extractor: Box::new(extract_json_list),
         }
     }
 }
@@ -84,11 +105,17 @@ pub struct StagingRepositories;
 
 impl StagingRepositories {
     pub fn list() -> NexusRequest<Vec<StagingProfileRepository>> {
-        NexusRequest::json_json(Method::GET, "/service/local/staging/profile_repositories".to_string())
+        NexusRequest::json_json(Method::GET,
+                                "/service/local/staging/profile_repositories".to_string(),
+                                extract_json_list
+        )
     }
 
     pub fn get(staged_repository_id: &str) -> NexusRequest<StagingProfileRepository> {
-        NexusRequest::json_json(Method::GET, format!("/service/local/staging/profile_repositories/{staged_repository_id}"))
+        NexusRequest::json_json(Method::GET,
+                                format!("/service/local/staging/repository/{staged_repository_id}"),
+                                |text| Ok(serde_json::from_str(text)?)
+        )
     }
 }
 

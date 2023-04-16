@@ -43,7 +43,12 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::StagingRepoPromote => {}
         Commands::StagingRepoFinish => {}
-        Commands::StagingRepoGet => {}
+        Commands::StagingRepoGet { repo } => {
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingRepositories::get(&repo)).await?;
+            let repository = response.parsed().await?;
+            log::info!("{repository:?}");
+        }
         Commands::StagingRepoActivity => {}
     }
 
@@ -81,6 +86,8 @@ enum Commands {
     },
     StagingRepoPromote,
     StagingRepoFinish,
-    StagingRepoGet,
+    StagingRepoGet {
+        repo: String,
+    },
     StagingRepoActivity,
 }
