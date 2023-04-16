@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use anyhow::Error;
 
 use reqwest::header::{ACCEPT, CONTENT_TYPE, HeaderMap, USER_AGENT};
@@ -21,14 +20,13 @@ pub struct NexusRequest<A> {
     url_suffix: String,
     content_type: &'static str,
     accept: &'static str,
-    _phantom: PhantomData<A>,
+    extractor: Box<dyn FnOnce(&str) -> anyhow::Result<A>>,
 }
 
 pub struct NexusResponse<A>
 {
     raw_response: reqwest::Response,
     extractor: Box<dyn FnOnce(&str) -> anyhow::Result<A>>,
-    _phantom: PhantomData<A>
 }
 
 impl<A: DeserializeOwned> NexusResponse<A> {
@@ -60,14 +58,14 @@ impl StagingProfiles {
     // pub fn promote(staged_repository_id: &str) -> NexusRequest { todo!() }
 }
 
-impl<A> NexusRequest<A> {
+impl<A: DeserializeOwned + 'static> NexusRequest<A> {
     pub fn json_json(method: Method, url_suffix: String) -> Self {
         Self {
             method,
             url_suffix,
             content_type: APPLICATION_JSON,
             accept: APPLICATION_JSON,
-            _phantom: Default::default(),
+            extractor: Box::new(parse_response_data),
         }
     }
 
@@ -77,7 +75,7 @@ impl<A> NexusRequest<A> {
             url_suffix,
             content_type: APPLICATION_XML,
             accept: APPLICATION_XML,
-            _phantom: Default::default(),
+            extractor: Box::new(parse_response_data),
         }
     }
 }
@@ -127,8 +125,7 @@ impl NexusClient {
             .send().await?;
         Ok(NexusResponse {
             raw_response,
-            extractor: Box::new(parse_response_data),
-            _phantom: Default::default(),
+            extractor: request.extractor,
         })
     }
 }
