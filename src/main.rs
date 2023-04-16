@@ -37,9 +37,10 @@ async fn main() -> anyhow::Result<()> {
 
         Commands::StagingRepoStart { profile, description } => {
             let nexus = nexus_client()?;
-            let response = nexus.execute(StagingProfiles::start(&profile, &description.unwrap_or("".to_string()))).await?;
+            let request = StagingProfiles::start(&profile, &description.unwrap_or("".to_string()));
+            let response = nexus.execute(request).await?;
             let staged_repo_id = response.parsed().await?;
-            println!("{staged_repo_id}");
+            println!("{staged_repo_id:?}");
         }
 
         Commands::StagingRepoDrop { profile, repo }  => {

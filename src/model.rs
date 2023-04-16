@@ -2,12 +2,34 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize)]
+#[serde(rename = "promoteRequest")]
+pub struct PromoteRequest {
+    pub data: PromoteRequestData,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromoteRequestData {
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub staged_repository_id: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub target_repository_id: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename = "promoteResponse")]
+pub struct PromoteResponse {
+    pub data: PromoteResponseData,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PromoteResponseData {
     pub staged_repository_id: Option<String>,
     pub description: Option<String>,
-    pub target_repository_id: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -17,3 +17,4 @@ netrc = "0.4.1"
 netrc-rs = "0.1.2"
 url = "2.3.1"
 tokio = { version = "1.27.0", features = ["full"] }
+serde-xml-rs = "0.6.0"

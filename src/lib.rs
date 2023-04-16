@@ -7,7 +7,7 @@ use url::Url;
 
 pub use auth::get_credentials;
 
-use crate::model::{NexusResponseData, StagingProfile, StagingProfileRepository};
+use crate::model::{NexusResponseData, PromoteResponse, StagingProfile, StagingProfileRepository};
 
 pub mod model;
 mod auth;
@@ -109,20 +109,24 @@ impl StagingProfiles {
         )
     }
 
-    pub fn start(profile_id_key: &str, description: &str) -> NexusRequest<String> {
-        let _body = model::PromoteRequestData { //todo
-            staged_repository_id: None,
-            description: (!description.is_empty()).then(|| description.to_string()),
-            target_repository_id: None,
+    pub fn start(profile_id_key: &str, description: &str) -> NexusRequest<Option<String>> {
+        let body = model::PromoteRequest {
+            data: model::PromoteRequestData {
+                staged_repository_id: None,
+                description: (!description.is_empty()).then(|| description.to_string()),
+                target_repository_id: None,
+            }
         };
+        let xml_body = serde_xml_rs::to_string(&body).unwrap();
+        log::debug!("Sending XML: {xml_body}");
         NexusRequest::xml_xml(Method::POST,
                               format!("/service/local/staging/profiles/{profile_id_key}/start"),
-            format!(r#"<promoteRequest>
-    <data>
-        <description>{description}</description>
-    </data>
-</promoteRequest>"#),
-            |text| Ok(text.to_string())
+                              xml_body,
+                              |text| {
+                                  log::debug!("Received XML: {text}");
+                                  let promote_response: PromoteResponse = serde_xml_rs::from_str(text)?;
+                                  Ok(promote_response.data.staged_repository_id)
+                              }
         )
     }
 
@@ -191,7 +195,7 @@ impl NexusClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::{NexusClient, StagingRepositories};
+    use crate::{model, NexusClient, StagingRepositories};
     use crate::auth::get_credentials;
 
     #[tokio::test]
@@ -206,6 +210,21 @@ mod tests {
         for repo in list {
             println!("repo: {repo:?}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_xml() -> anyhow::Result<()> {
+        let description = "hello";
+        let body = model::PromoteRequest {
+            data: model::PromoteRequestData {
+                staged_repository_id: None,
+                description: (!description.is_empty()).then(|| description.to_string()),
+                target_repository_id: None,
+            }
+        };
+
+        println!("serde_xml_rs: {}", serde_xml_rs::to_string(&body)?);
         Ok(())
     }
 }
