@@ -9,6 +9,13 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     match cli.command {
+        Commands::StagingProfile { profile } => {
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingProfiles::get(&profile)).await?;
+            let profile = response.parsed().await?;
+            println!("profile id: '{}' name: '{}' mode: '{}' target repo: {}", profile.id, profile.name, profile.mode, profile.promotion_target_repository);
+            log::debug!("{profile:?}");
+        }
         Commands::StagingProfiles => {
             let nexus = nexus_client()?;
             let response = nexus.execute(StagingProfiles::list()).await?;
@@ -72,6 +79,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     StagingProfiles,
+    StagingProfile {
+        #[arg(short,long)]
+        profile: String,
+    },
     StagingRepos,
     StagingRepoStart {
         #[arg(short,long)]

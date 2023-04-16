@@ -25,6 +25,30 @@ pub struct NexusRequest<A> {
     extractor: Box<Extractor<A>>,
 }
 
+impl<A: DeserializeOwned + 'static> NexusRequest<A> {
+    pub fn json_json<F>(method: Method, url_suffix: String, extractor: F) -> Self
+        where F: FnOnce(&str) -> anyhow::Result<A> + 'static
+    {
+        Self {
+            method,
+            url_suffix,
+            content_type: APPLICATION_JSON,
+            accept: APPLICATION_JSON,
+            extractor: Box::new(extractor),
+        }
+    }
+
+    pub fn xml_xml(method: Method, url_suffix: String) -> Self {
+        Self {
+            method,
+            url_suffix,
+            content_type: APPLICATION_XML,
+            accept: APPLICATION_XML,
+            extractor: Box::new(json_extract_data),
+        }
+    }
+}
+
 pub struct NexusResponse<A>
 {
     raw_response: reqwest::Response,
@@ -56,7 +80,8 @@ impl<A: DeserializeOwned> NexusResponse<A> {
     }
 }
 
-fn extract_json_list<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
+/// Extracts content carried inside JSON "data" wrapping object
+fn json_extract_data<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
     let resp: NexusResponseData = serde_json::from_str(&text)?;
     Ok(serde_json::from_value(resp.data)?)
 }
@@ -65,9 +90,19 @@ fn extract_json_list<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
 pub struct StagingProfiles;
 
 impl StagingProfiles {
-    pub fn list() -> NexusRequest<Vec<StagingProfile>> { todo!() }
+    pub fn list() -> NexusRequest<Vec<StagingProfile>> {
+        NexusRequest::json_json(Method::GET,
+                                "/service/local/staging/profiles".to_string(),
+                                json_extract_data
+        )
+    }
 
-    pub fn get(_profile_id_key: &str) -> NexusRequest<StagingProfile> { todo!() }
+    pub fn get(profile_id_key: &str) -> NexusRequest<StagingProfile> {
+        NexusRequest::json_json(Method::GET,
+                                format!("/service/local/staging/profiles/{profile_id_key}"),
+                                json_extract_data
+        )
+    }
 
     pub fn start(_profile_id_key: &str, _description: &str) -> NexusRequest<String> { todo!() }
 
@@ -77,37 +112,13 @@ impl StagingProfiles {
     // pub fn promote(staged_repository_id: &str) -> NexusRequest { todo!() }
 }
 
-impl<A: DeserializeOwned + 'static> NexusRequest<A> {
-    pub fn json_json<F>(method: Method, url_suffix: String, extractor: F) -> Self
-        where F: FnOnce(&str) -> anyhow::Result<A> + 'static
-    {
-        Self {
-            method,
-            url_suffix,
-            content_type: APPLICATION_JSON,
-            accept: APPLICATION_JSON,
-            extractor: Box::new(extractor),
-        }
-    }
-
-    pub fn xml_xml(method: Method, url_suffix: String) -> Self {
-        Self {
-            method,
-            url_suffix,
-            content_type: APPLICATION_XML,
-            accept: APPLICATION_XML,
-            extractor: Box::new(extract_json_list),
-        }
-    }
-}
-
 pub struct StagingRepositories;
 
 impl StagingRepositories {
     pub fn list() -> NexusRequest<Vec<StagingProfileRepository>> {
         NexusRequest::json_json(Method::GET,
                                 "/service/local/staging/profile_repositories".to_string(),
-                                extract_json_list
+                                json_extract_data
         )
     }
 
