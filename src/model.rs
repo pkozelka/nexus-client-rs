@@ -4,8 +4,16 @@ use serde_json::Value;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PromoteRequest {
-    pub data: Vec<StagingProfileRepository>,
+pub struct PromoteRequestData {
+    pub staged_repository_id: Option<String>,
+    pub description: Option<String>,
+    pub target_repository_id: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexusResponseData {
+    pub data: Value,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

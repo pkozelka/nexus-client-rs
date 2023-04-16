@@ -1,0 +1,8 @@
+<!--
+curl -X POST -d@tests/data/promoteRequest.xml -u "$NEXUS_AUTH" -H "Content-Type: application/xml" -v https://oss.sonatype.org/service/local/staging/profiles/$STAGING_PROFILE/start >tests/data/promoteResponse.xml
+-->
+<promoteRequest>
+    <data>
+        <description>Hello</description>
+    </data>
+</promoteRequest>

@@ -1,115 +1,8 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 
 use clap::{Parser, Subcommand};
-use reqwest::header::{ACCEPT, HeaderMap};
-use serde_json::Value;
-use url::Url;
-use crate::model::{StagingProfile, StagingProfileRepository};
 
-mod model;
+use nexus_client::{NexusClient, StagingProfiles, StagingRepositories};
 
-fn get_credentials() -> anyhow::Result<(Url, String, String)> {
-    let nexus_url = match std::env::var("NEXUS_URL") {
-        Ok(nexus_url) => nexus_url,
-        Err(_) => "https://oss.sonatype.org".to_string()
-    };
-    log::info!("Nexus server: {nexus_url}");
-    let nexus_url = Url::parse(&nexus_url)?;
-    let nexus_host = nexus_url.host().unwrap()
-        .to_string();
-    log::debug!("...host: {nexus_host}");
-    if let Ok(auth) = std::env::var("NEXUS_CLIENT_AUTH") {
-        return if let Some((user, password)) = auth.split_once(':') {
-            Ok((nexus_url, user.to_string(), password.to_string()))
-        } else {
-            anyhow::bail!("Invalid auth string in NEXUS_CLIENT_AUTH variable")
-        }
-    }
-    let file = File::open("/home/pk/.netrc")?;
-    let file = BufReader::new(&file);
-    let s = file.lines()
-        .filter_map(|line| match line {
-            Err(_) => None,
-            Ok(line) if line.trim_start().starts_with('#') => None,
-            Ok(line) => Some(line)
-        })
-        .collect::<Vec<String>>()
-        .join("");
-
-    let netrc = netrc_rs::Netrc::parse(s, false).unwrap();
-    for machine in &netrc.machines {
-        match &machine.name {
-            None => {}
-            Some(name) => {
-                if nexus_host.as_str() == name {
-                    let user = machine.login.clone().unwrap();
-                    let password = machine.password.clone().unwrap();
-                    return Ok((nexus_url, user, password));
-                }
-            }
-        }
-    }
-    anyhow::bail!("Hostname not found in .netrc: '{:?}'", nexus_url.host())
-}
-
-async fn staging_profile_list() -> anyhow::Result<()> {
-// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
-    let (nexus_url, user, password) = get_credentials()?;
-    log::info!("NEXUS URL: {nexus_url}");
-    log::info!("USER:      {user}");
-    log::trace!("PASSWORD:  {password}");
-
-
-    // let r=  reqwest::RequestBuilder:: basic_auth(user, Some(password))
-    //     .build();
-    let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, "application/json".parse()?);
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()?;
-
-    let r = client.get("https://oss.sonatype.org/service/local/staging/profiles")
-        .basic_auth(user, Some(password))
-        .build()?;
-    let response = client.execute(r).await?;
-    let json = response.json::<Value>().await?;
-    let repos: model::ListOfObjects<StagingProfile> = serde_json::from_value(json)?;
-    for profile in repos.data {
-        println!("profile id: '{}' name: '{}' mode: '{}' target repo: {}", profile.id, profile.name, profile.mode, profile.promotion_target_repository);
-        log::debug!("{profile:?}");
-    }
-    Ok(())
-}
-
-async fn staging_repos_list() -> anyhow::Result<()> {
-// curl -u $NEXUS_AUTH https://oss.sonatype.org/service/local/staging/profile_repositories > tests/data/profile_repositories
-    let (nexus_url, user, password) = get_credentials()?;
-    log::info!("NEXUS URL: {nexus_url}");
-    log::info!("USER:      {user}");
-    log::trace!("PASSWORD:  {password}");
-
-
-    // let r=  reqwest::RequestBuilder:: basic_auth(user, Some(password))
-    //     .build();
-    let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, "application/json".parse()?);
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()?;
-
-    let r = client.get("https://oss.sonatype.org/service/local/staging/profile_repositories")
-        .basic_auth(user, Some(password))
-        .build()?;
-    let response = client.execute(r).await?;
-    let json = response.json::<Value>().await?;
-    let repos: model::ListOfObjects<StagingProfileRepository> = serde_json::from_value(json)?;
-    for repo in repos.data {
-        println!("{} profile: '{}' id: '{}' # {}", repo.created, repo.profile_id, repo.repository_id, repo.description);
-        log::debug!("{repo:?}");
-    }
-    Ok(())
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -117,17 +10,49 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::StagingProfiles => {
-            staging_profile_list().await?;
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingProfiles::list()).await?;
+            let list = response.parsed().await?;
+            for profile in list {
+                println!("profile id: '{}' name: '{}' mode: '{}' target repo: {}", profile.id, profile.name, profile.mode, profile.promotion_target_repository);
+                log::debug!("{profile:?}");
+            }
         }
         Commands::StagingRepos => {
-            staging_repos_list().await?;
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingRepositories::list()).await?;
+            let list = response.parsed().await?;
+            for repo in list {
+                println!("{} profile: '{}' id: '{}' # {}", repo.created, repo.profile_id, repo.repository_id, repo.description);
+                log::debug!("{repo:?}");
+            }
         }
-        _ => {
-            todo!()
+
+        Commands::StagingRepoStart { profile, description } => {
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingProfiles::start(&profile, &description.unwrap_or("".to_string()))).await?;
+            let staged_repo_id = response.parsed().await?;
+            println!("{staged_repo_id}");
         }
+
+        Commands::StagingRepoDrop { profile, repo }  => {
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingProfiles::drop(&profile, &repo)).await?;
+            response.parsed().await?;
+            log::warn!("Dropped: {repo}");
+        }
+        Commands::StagingRepoPromote => {}
+        Commands::StagingRepoFinish => {}
+        Commands::StagingRepoGet => {}
+        Commands::StagingRepoActivity => {}
     }
 
     Ok(())
+}
+
+fn nexus_client() -> anyhow::Result<NexusClient> {
+    let (server, user, password) = nexus_client::get_credentials()?;
+    Ok(NexusClient::new(server, &user, &password)?)
 }
 
 /// Simple program to greet a person
@@ -143,8 +68,17 @@ struct Cli {
 enum Commands {
     StagingProfiles,
     StagingRepos,
-    StagingRepoStart,
-    StagingRepoDrop,
+    StagingRepoStart {
+        #[arg(short,long)]
+        profile: String,
+        #[arg(short,long)]
+        description: Option<String>,
+    },
+    StagingRepoDrop {
+        #[arg(short,long)]
+        profile: String,
+        repo: String,
+    },
     StagingRepoPromote,
     StagingRepoFinish,
     StagingRepoGet,
