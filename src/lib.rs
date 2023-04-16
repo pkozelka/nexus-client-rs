@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use anyhow::Error;
 
 use reqwest::header::{ACCEPT, CONTENT_TYPE, HeaderMap, USER_AGENT};
 use reqwest::Method;
@@ -13,7 +14,7 @@ pub mod model;
 mod auth;
 
 const APPLICATION_JSON: &str = "application/json";
-// const APPLICATION_XML: &str = "application/xml";
+const APPLICATION_XML: &str = "application/xml";
 
 pub struct NexusRequest<A> {
     method: Method,
@@ -23,17 +24,24 @@ pub struct NexusRequest<A> {
     _phantom: PhantomData<A>,
 }
 
-pub struct NexusResponse<A> {
+pub struct NexusResponse<A>
+{
     raw_response: reqwest::Response,
+    extractor: Box<dyn FnOnce(&str) -> anyhow::Result<A>>,
     _phantom: PhantomData<A>
 }
 
 impl<A: DeserializeOwned> NexusResponse<A> {
     pub async fn parsed(self) -> anyhow::Result<A> {
         // TODO: somehow, make this code dependent on A
-        let resp: NexusResponseData = self.raw_response.json().await?;
-        Ok(serde_json::from_value(resp.data)?)
+        let text = self.raw_response.text().await?;
+        (self.extractor)(&text)
     }
+}
+
+fn parse_response_data<A: DeserializeOwned>(text: &str) -> Result<A, Error> {
+    let resp: NexusResponseData = serde_json::from_str(&text)?;
+    Ok(serde_json::from_value(resp.data)?)
 }
 
 #[derive(Default)]
@@ -52,19 +60,38 @@ impl StagingProfiles {
     // pub fn promote(staged_repository_id: &str) -> NexusRequest { todo!() }
 }
 
-pub struct StagingRepositories;
-
-impl StagingRepositories {
-    pub fn list() -> NexusRequest<Vec<StagingProfileRepository>> {
-        NexusRequest {
-            method: Method::GET,
-            url_suffix: "/service/local/staging/profile_repositories".to_string(),
+impl<A> NexusRequest<A> {
+    pub fn json_json(method: Method, url_suffix: String) -> Self {
+        Self {
+            method,
+            url_suffix,
             content_type: APPLICATION_JSON,
             accept: APPLICATION_JSON,
             _phantom: Default::default(),
         }
     }
-    pub fn get(_staged_repository_id: &str) -> NexusRequest<StagingProfileRepository> { todo!() }
+
+    pub fn xml_xml(method: Method, url_suffix: String) -> Self {
+        Self {
+            method,
+            url_suffix,
+            content_type: APPLICATION_XML,
+            accept: APPLICATION_XML,
+            _phantom: Default::default(),
+        }
+    }
+}
+
+pub struct StagingRepositories;
+
+impl StagingRepositories {
+    pub fn list() -> NexusRequest<Vec<StagingProfileRepository>> {
+        NexusRequest::json_json(Method::GET, "/service/local/staging/profile_repositories".to_string())
+    }
+
+    pub fn get(staged_repository_id: &str) -> NexusRequest<StagingProfileRepository> {
+        NexusRequest::json_json(Method::GET, format!("/service/local/staging/profile_repositories/{staged_repository_id}"))
+    }
 }
 
 /// https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
@@ -90,7 +117,7 @@ impl NexusClient {
         })
     }
 
-    pub async fn execute<A>(&self, request: NexusRequest<A>) -> anyhow::Result<NexusResponse<A>> {
+    pub async fn execute<A: DeserializeOwned + 'static>(&self, request: NexusRequest<A>) -> anyhow::Result<NexusResponse<A>> {
         let url = self.base_url.join(&request.url_suffix)?;
         log::info!("requesting: {url}");
         let raw_response = self.client.request(request.method, url)
@@ -100,6 +127,7 @@ impl NexusClient {
             .send().await?;
         Ok(NexusResponse {
             raw_response,
+            extractor: Box::new(parse_response_data),
             _phantom: Default::default(),
         })
     }
