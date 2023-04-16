@@ -6,6 +6,9 @@ use nexus_client::{NexusClient, StagingProfiles, StagingRepositories};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    if let Err(_) = std::env::var("RUST_LOG") {
+        std::env::set_var("RUST_LOG", "info");
+    }
     env_logger::init();
     let cli = Cli::parse();
     match cli.command {
@@ -46,8 +49,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::StagingRepoDrop { profile, repo }  => {
             let nexus = nexus_client()?;
             let response = nexus.execute(StagingProfiles::drop(&profile, &repo)).await?;
-            response.parsed().await?;
-            log::warn!("Dropped: {repo}");
+            response.check().await?;
+            log::warn!("Staging repository with profile '{profile}' was successfully dropped: {repo}");
         }
         Commands::StagingRepoPromote => {}
         Commands::StagingRepoFinish => {}

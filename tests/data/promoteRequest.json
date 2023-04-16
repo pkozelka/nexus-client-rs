@@ -1,7 +1,1 @@
-{
-    "promoteRequest": {
-        "data": {
-            "description": "experimenting with JSON"
-        }
-    }
-}
+{"promoteRequest": {"data": {"description": "experimenting with JSON"}}}
