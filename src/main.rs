@@ -46,21 +46,40 @@ async fn main() -> anyhow::Result<()> {
             println!("{staged_repo_id:?}");
         }
 
-        Commands::StagingRepoDrop { profile, repo }  => {
-            let nexus = nexus_client()?;
-            let response = nexus.execute(StagingProfiles::drop(&profile, &repo)).await?;
-            response.check().await?;
-            log::warn!("Staging repository with profile '{profile}' was successfully dropped: {repo}");
-        }
-        Commands::StagingRepoPromote => {}
-        Commands::StagingRepoFinish => {}
         Commands::StagingRepoGet { repo } => {
             let nexus = nexus_client()?;
             let response = nexus.execute(StagingRepositories::get(&repo)).await?;
             let repository = response.parsed().await?;
             log::info!("{repository:?}");
         }
-        Commands::StagingRepoActivity => {}
+        Commands::StagingRepoDrop { profile, repo }  => {
+            let nexus = nexus_client()?;
+            let response = nexus.execute(StagingProfiles::drop(&profile, &repo)).await?;
+            response.check().await?;
+            log::warn!("Staging repository with profile '{profile}' was successfully dropped: {repo}");
+        }
+        Commands::StagingRepoPromote { profile, repo } => {
+            let nexus = nexus_client()?;
+            let request = StagingProfiles::promote(&profile, &repo);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
+        Commands::StagingRepoFinish { profile, repo } => {
+            let nexus = nexus_client()?;
+            let request = StagingProfiles::promote(&profile, &repo);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
+
+        Commands::StagingRepoActivity { repo } => {
+            let nexus = nexus_client()?;
+            let request = StagingRepositories::activity(&repo);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
     }
 
     Ok(())
@@ -99,10 +118,20 @@ enum Commands {
         profile: String,
         repo: String,
     },
-    StagingRepoPromote,
-    StagingRepoFinish,
+    StagingRepoPromote {
+        #[arg(short,long)]
+        profile: String,
+        repo: String,
+    },
+    StagingRepoFinish {
+        #[arg(short,long)]
+        profile: String,
+        repo: String,
+    },
     StagingRepoGet {
         repo: String,
     },
-    StagingRepoActivity,
+    StagingRepoActivity {
+        repo: String,
+    },
 }

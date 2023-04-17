@@ -161,8 +161,27 @@ impl StagingProfiles {
         )
     }
 
-    // pub fn finish(staged_repository_id: &str) -> NexusRequest { todo!() }
-    // pub fn promote(staged_repository_id: &str) -> NexusRequest { todo!() }
+    pub fn promote(profile_id_key: &str, repository_id: &str) -> NexusRequest<String> {
+        // request body is too trivial to bother with JSON - TODO perhaps just fail on strange chars to prevent JSON injection
+        let json_body = format!(r##"{{"data": {{"stagedRepositoryId":"{repository_id}"}} }}"##);
+        // response body is empty in OK case, otherwise we don't even get to parse it here
+        NexusRequest::json_json(Method::POST,
+                                format!("/service/local/staging/profiles/{profile_id_key}/promote"),
+                                json_body,
+                                |text| Ok(text.to_string()),
+        )
+    }
+
+    pub fn finish(profile_id_key: &str, repository_id: &str) -> NexusRequest<String> {
+        // request body is too trivial to bother with JSON - TODO perhaps just fail on strange chars to prevent JSON injection
+        let json_body = format!(r##"{{"data": {{"stagedRepositoryId":"{repository_id}"}} }}"##);
+        // response body is empty in OK case, otherwise we don't even get to parse it here
+        NexusRequest::json_json(Method::POST,
+                                format!("/service/local/staging/profiles/{profile_id_key}/finish"),
+                                json_body,
+                                |text| Ok(text.to_string()),
+        )
+    }
 }
 
 pub struct StagingRepositories;
@@ -181,6 +200,14 @@ impl StagingRepositories {
                                 format!("/service/local/staging/repository/{staged_repository_id}"),
                                 "".to_string(),
                                 |text| Ok(serde_json::from_str(text)?),
+        )
+    }
+
+    pub fn activity(staged_repository_id: &str) -> NexusRequest<String> {
+        NexusRequest::json_json(Method::GET,
+                                format!("/service/local/staging/repository/{staged_repository_id}/activity"),
+                                "".to_string(),
+                                |text| Ok(text.to_string()),
         )
     }
 }
