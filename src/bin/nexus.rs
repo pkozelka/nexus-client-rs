@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
-use nexus_client::{NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
+use nexus_client::NexusRepository;
+use nexus_client::NexusClient;
+use nexus_client::{StagingProfiles, StagingRepositories};
 
 
 #[tokio::main]

@@ -8,7 +8,7 @@ pub fn nexus_url() -> Result<Url, url::ParseError> {
         Ok(nexus_url) => nexus_url,
         Err(_) => "https://oss.sonatype.org".to_string()
     };
-    log::info!("Nexus server: {nexus_url}");
+    log::debug!("Nexus server: {nexus_url}");
     Url::parse(&nexus_url)
 }
 
