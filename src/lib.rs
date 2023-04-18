@@ -1,6 +1,6 @@
 use anyhow::Error;
 
-use reqwest::header::{ACCEPT, CONTENT_TYPE, HeaderMap, USER_AGENT};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
 use reqwest::{Method, Response};
 use serde::de::DeserializeOwned;
 use url::Url;
@@ -11,6 +11,7 @@ use crate::model::{NexusResponseData, PromoteResponse, StagingProfile, StagingPr
 
 pub mod model;
 mod auth;
+mod util;
 
 const APPLICATION_JSON: &str = "application/json";
 const APPLICATION_XML: &str = "application/xml";
@@ -216,7 +217,6 @@ impl StagingRepositories {
 pub struct NexusClient {
     base_url: Url,
     client: reqwest::Client,
-    /// until https://github.com/seanmonstar/reqwest/pull/1398 gets implemented:
     credentials: (String, String),
 }
 
@@ -224,6 +224,7 @@ impl NexusClient {
     pub fn new(base_url: Url, user: &str, password: &str) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
+        headers.insert(AUTHORIZATION,  util::basic_auth(user, Some(password)));
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .build()?;
@@ -241,7 +242,6 @@ impl NexusClient {
             log::debug!("- sending '{}' body: {}", request.content_type, request.body);
         }
         let raw_response = self.client.request(request.method, url)
-            .basic_auth(&self.credentials.0, Some(&self.credentials.1))
             .header(ACCEPT, request.accept)
             .header(CONTENT_TYPE, request.content_type)
             .body(request.body)
