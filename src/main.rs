@@ -1,7 +1,7 @@
-
+use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 
-use nexus_client::{NexusClient, StagingProfiles, StagingRepositories};
+use nexus_client::{NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
 
 
 #[tokio::main]
@@ -80,14 +80,49 @@ async fn main() -> anyhow::Result<()> {
             let s = response.text().await?;
             println!("{s:?}");
         }
+        Commands::Deploy { repo, remote_path, deploy_command } => {
+            let remote_path = match remote_path {
+                None => "/",
+                Some(ref remote_path) => remote_path
+            };
+            match deploy_command {
+                DeployCommands::Upload { local_path } => {
+                    let nexus = nexus_client()?;
+                    let url = nexus.upload_file(&repo, &local_path, remote_path).await?;
+                    log::info!("File {} uploaded to {url}", local_path.display());
+                }
+                DeployCommands::Download { local_path } => {
+                    let nexus = nexus_public_client()?;
+                    let url = nexus.download_file(&repo, &local_path, remote_path).await?;
+                    log::info!("File {} downloaded from {url}", local_path.display());
+                }
+                DeployCommands::Delete => {
+                    let nexus = nexus_client()?;
+                    let request = NexusRepository::nexus_deploy(&repo)
+                        .delete(remote_path);
+                    let response = nexus.execute(request).await?;
+                    response.check().await?;
+                    println!("Deleted: {remote_path} from repository {repo}");
+                }
+                DeployCommands::List => {
+                    let _nexus = nexus_public_client()?;
+                    todo!()
+                }
+            }
+        }
     }
 
     Ok(())
 }
 
 fn nexus_client() -> anyhow::Result<NexusClient> {
-    let (server, user, password) = nexus_client::get_credentials()?;
-    Ok(NexusClient::new(server, &user, &password)?)
+    let nexus_url = nexus_client::nexus_url()?;
+    let (user, password) = nexus_client::get_credentials(&nexus_url)?;
+    Ok(NexusClient::login(nexus_url, &user, &password)?)
+}
+
+fn nexus_public_client() -> anyhow::Result<NexusClient> {
+    Ok(NexusClient::anonymous(nexus_client::nexus_url()?)?)
 }
 
 /// Simple program to greet a person
@@ -134,4 +169,27 @@ enum Commands {
     StagingRepoActivity {
         repo: String,
     },
+
+    Deploy {
+        #[arg(short,long)]
+        repo: String,
+        #[arg(short='p',long)]
+        remote_path: Option<String>,
+        #[command(subcommand)]
+        deploy_command: DeployCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum DeployCommands {
+    Upload {
+        #[arg(short,long)]
+        local_path: PathBuf,
+    },
+    Download {
+        #[arg(short,long)]
+        local_path: PathBuf,
+    },
+    Delete,
+    List,
 }

@@ -1,10 +1,15 @@
+use std::path::Path;
+
 use anyhow::Error;
-
-use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
 use reqwest::{Method, Response};
+use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, USER_AGENT};
 use serde::de::DeserializeOwned;
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
+use futures_util::StreamExt;
 
+pub use auth::nexus_url;
 pub use auth::get_credentials;
 
 use crate::model::{NexusResponseData, PromoteResponse, StagingProfile, StagingProfileRepository};
@@ -63,47 +68,47 @@ pub struct NexusResponse<A>
 
 impl<A: DeserializeOwned> NexusResponse<A> {
     pub async fn parsed(self) -> anyhow::Result<A> {
-        let response = Self::check_status(self.raw_response).await?;
+        let response = check_status(self.raw_response).await?;
         let text = response.text().await?;
         log::trace!("parsing response text: {text}");
         (self.extractor)(&text)
     }
 
     pub async fn check(self) -> anyhow::Result<Response> {
-        Self::check_status(self.raw_response).await
+        check_status(self.raw_response).await
     }
 
     pub async fn text(self) -> anyhow::Result<String> {
-        let response = Self::check_status(self.raw_response).await?;
+        let response = check_status(self.raw_response).await?;
         let text = response.text().await?;
         log::trace!("returning response text: {text}");
         Ok(text)
     }
+}
 
-    async fn check_status(response: Response) -> anyhow::Result<Response> {
-        let status = response.status();
-        if status.is_success() {
-            return Ok(response);
-        }
-        let content_type = response.headers().get(CONTENT_TYPE);
-        match content_type {
-            None => {}
-            Some(content_type) => {
-                if content_type.to_str().unwrap().starts_with(APPLICATION_JSON) {
-                    let text = response.text().await?;
-                    anyhow::bail!("HTTP {} {}: with this JSON info: {text}",
+async fn check_status(response: Response) -> anyhow::Result<Response> {
+    let status = response.status();
+    if status.is_success() {
+        return Ok(response);
+    }
+    let content_type = response.headers().get(CONTENT_TYPE);
+    match content_type {
+        None => {}
+        Some(content_type) => {
+            if content_type.to_str().unwrap().starts_with(APPLICATION_JSON) {
+                let text = response.text().await?;
+                anyhow::bail!("HTTP {} {}: with this JSON info: {text}",
                         status.as_str(),
                         status.canonical_reason().unwrap_or(""),
                     );
-                }
             }
         }
-        let text = response.text().await?;
-        anyhow::bail!("HTTP {} {}: {text}",
+    }
+    let text = response.text().await?;
+    anyhow::bail!("HTTP {} {}: {text}",
             status.as_str(),
             status.canonical_reason().unwrap_or("")
         );
-    }
 }
 
 /// Extracts content carried inside JSON "data" wrapping object
@@ -213,15 +218,41 @@ impl StagingRepositories {
     }
 }
 
+pub struct NexusRepository {
+    repo_path: String,
+}
+
+impl NexusRepository {
+    pub fn nexus_deploy(repository_id: &str) -> Self {
+        let repo_path = format!("/service/local/staging/deployByRepositoryId/{repository_id}");
+        Self { repo_path }
+    }
+
+    pub fn nexus_readonly(repository_id: &str) -> Self {
+        let repo_path = format!("/service/local/repositories/{repository_id}/content");
+        Self { repo_path }
+    }
+
+    pub fn delete(&self, path: &str) -> NexusRequest<()> {
+        NexusRequest {
+            method: Method::DELETE,
+            url_suffix: format!("{}/{path}", self.repo_path),
+            body: "".to_string(),
+            content_type: "",
+            accept: "",
+            extractor: Box::new(|_|Ok(())),
+        }
+    }
+}
+
 /// https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
 pub struct NexusClient {
     base_url: Url,
     client: reqwest::Client,
-    credentials: (String, String),
 }
 
 impl NexusClient {
-    pub fn new(base_url: Url, user: &str, password: &str) -> anyhow::Result<Self> {
+    pub fn login(base_url: Url, user: &str, password: &str) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
         headers.insert(AUTHORIZATION,  util::basic_auth(user, Some(password)));
@@ -231,27 +262,77 @@ impl NexusClient {
         Ok(Self {
             base_url,
             client,
-            credentials: (user.to_string(), password.to_string()),
+        })
+    }
+
+    pub fn anonymous(base_url: Url) -> anyhow::Result<Self> {
+        let mut headers = HeaderMap::new();
+        headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()?;
+        Ok(Self {
+            base_url,
+            client,
         })
     }
 
     pub async fn execute<A: DeserializeOwned + 'static>(&self, request: NexusRequest<A>) -> anyhow::Result<NexusResponse<A>> {
         let url = self.base_url.join(&request.url_suffix)?;
-        log::debug!("requesting: {url}");
-        if !request.body.is_empty() {
+        log::debug!("requesting: {} {url}", request.method);
+        let http_request = self.client.request(request.method, url)
+            .header(ACCEPT, request.accept);
+        let http_request = if !request.body.is_empty() {
             log::debug!("- sending '{}' body: {}", request.content_type, request.body);
-        }
-        let raw_response = self.client.request(request.method, url)
-            .header(ACCEPT, request.accept)
-            .header(CONTENT_TYPE, request.content_type)
-            .body(request.body)
-            .send().await?;
-        let content_length = raw_response.content_length().unwrap_or(0);
-        log::debug!("- received '{:?}' body, content-length = {content_length}", raw_response.headers().get(CONTENT_TYPE));
+            http_request
+                .header(CONTENT_TYPE, request.content_type)
+                .body(request.body)
+        } else {
+            http_request
+        };
+        let http_response = http_request.send().await?;
+        let content_length = http_response.content_length().unwrap_or(0);
+        log::debug!("- received '{:?}' body, content-length = {content_length}", http_response.headers().get(CONTENT_TYPE));
         Ok(NexusResponse {
-            raw_response,
+            raw_response: http_response,
             extractor: request.extractor,
         })
+    }
+
+    pub async fn upload_file(&self, staged_repository_id: &str, file: &Path, path: &str) -> anyhow::Result<Url> {
+        let mut file = File::open(file).await?;
+        let mut vec = Vec::new();
+        file.read_to_end(&mut vec).await?;
+        let length = file.metadata().await?.len();
+        let url = self.base_url.join(&format!("/service/local/staging/deployByRepositoryId/{staged_repository_id}/{path}"))?;
+        log::debug!("uploading(PUT) to: {url}");
+        let http_req = self.client.request(Method::PUT, url.clone())
+            .header(CONTENT_LENGTH, length)
+            .body(vec)
+            .build()?;
+        let http_response = self.client.execute(http_req).await?;
+        check_status(http_response).await?;
+        Ok(url)
+    }
+
+    pub async fn download_file(&self, staged_repository_id: &str, local_file: &Path, path: &str) -> anyhow::Result<Url> {
+        if let Some(dir) = local_file.parent() {
+            if ! dir.exists() {
+                anyhow::bail!("Directory does not exist: {}", dir.display());
+            }
+        }
+        let url = self.base_url.join(&format!("/service/local/repositories/{staged_repository_id}/content/{path}"))?;
+        log::debug!("downloading(GET) from: {url}");
+        let http_response = self.client.request(Method::GET, url.clone())
+            .send().await?;
+        let http_response = check_status(http_response).await?;
+        let mut stream = http_response.bytes_stream();
+        log::trace!("Creating file: {}", local_file.display());
+        let mut file = File::create(local_file).await?;
+        while let Some(chunk) = stream.next().await {
+            file.write(&chunk?).await?;
+        }
+        Ok(url)
     }
 }
 
@@ -265,7 +346,7 @@ mod tests {
         std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
         let (server, user, password) = get_credentials()?;
-        let nexus = NexusClient::new(server, &user, &password)?;
+        let nexus = NexusClient::login(server, &user, &password)?;
         let start_req = StagingRepositories::list();
         let start_resp = nexus.execute(start_req).await?;
         let list = start_resp.parsed().await?;
