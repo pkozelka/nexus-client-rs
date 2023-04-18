@@ -1,6 +1,7 @@
+use anyhow::Error;
 use reqwest::Method;
 use serde::de::DeserializeOwned;
-use anyhow::Error;
+
 use crate::client::NexusRequest;
 use crate::model;
 use crate::model::{NexusResponseData, PromoteResponse, StagingProfile, StagingProfileRepository};
@@ -112,5 +113,32 @@ impl StagingRepositories {
                                 "".to_string(),
                                 |text| Ok(text.to_string()),
         )
+    }
+}
+
+pub struct NexusRepository {
+    repo_path: String,
+}
+
+impl NexusRepository {
+    pub fn nexus_readwrite(repository_id: &str) -> Self {
+        let repo_path = format!("/service/local/staging/deployByRepositoryId/{repository_id}");
+        Self { repo_path }
+    }
+
+    pub fn nexus_readonly(repository_id: &str) -> Self {
+        let repo_path = format!("/service/local/repositories/{repository_id}/content");
+        Self { repo_path }
+    }
+
+    pub fn delete(&self, path: &str) -> NexusRequest<()> {
+        NexusRequest {
+            method: Method::DELETE,
+            url_suffix: format!("{}/{path}", self.repo_path),
+            body: "".to_string(),
+            content_type: "",
+            accept: "",
+            extractor: Box::new(|_|Ok(())),
+        }
     }
 }

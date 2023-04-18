@@ -1,11 +1,10 @@
-use reqwest::{Method, Response};
 use reqwest::header::CONTENT_TYPE;
+use reqwest::Response;
 
 pub use auth::get_credentials;
 pub use auth::nexus_url;
 pub use client::NexusClient;
-pub use restapi::{StagingProfiles, StagingRepositories};
-use client::NexusRequest;
+pub use restapi::{NexusRepository, StagingProfiles, StagingRepositories};
 use restapi::APPLICATION_JSON;
 
 pub mod model;
@@ -37,33 +36,6 @@ async fn check_status(response: Response) -> anyhow::Result<Response> {
             status.as_str(),
             status.canonical_reason().unwrap_or("")
         );
-}
-
-pub struct NexusRepository {
-    repo_path: String,
-}
-
-impl NexusRepository {
-    pub fn nexus_readwrite(repository_id: &str) -> Self {
-        let repo_path = format!("/service/local/staging/deployByRepositoryId/{repository_id}");
-        Self { repo_path }
-    }
-
-    pub fn nexus_readonly(repository_id: &str) -> Self {
-        let repo_path = format!("/service/local/repositories/{repository_id}/content");
-        Self { repo_path }
-    }
-
-    pub fn delete(&self, path: &str) -> NexusRequest<()> {
-        NexusRequest {
-            method: Method::DELETE,
-            url_suffix: format!("{}/{path}", self.repo_path),
-            body: "".to_string(),
-            content_type: "",
-            accept: "",
-            extractor: Box::new(|_|Ok(())),
-        }
-    }
 }
 
 #[cfg(test)]

@@ -1,10 +1,8 @@
 use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
-use nexus_client::NexusRepository;
-use nexus_client::NexusClient;
-use nexus_client::{StagingProfiles, StagingRepositories};
-
+use nexus_client::{NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
