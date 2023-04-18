@@ -44,7 +44,7 @@ pub struct NexusRepository {
 }
 
 impl NexusRepository {
-    pub fn nexus_deploy(repository_id: &str) -> Self {
+    pub fn nexus_readwrite(repository_id: &str) -> Self {
         let repo_path = format!("/service/local/staging/deployByRepositoryId/{repository_id}");
         Self { repo_path }
     }
