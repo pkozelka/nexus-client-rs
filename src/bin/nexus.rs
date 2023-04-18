@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use nexus_client::{NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
 
@@ -108,9 +108,28 @@ async fn main() -> anyhow::Result<()> {
                     response.check().await?;
                     println!("Deleted: {remote_path} from repository {repository_id}");
                 }
-                ContentCommands::DirectoryListing => {
-                    let _nexus = nexus_public_client()?;
-                    todo!()
+                ContentCommands::DirectoryListing { format } => {
+                    let nexus = nexus_public_client()?;
+                    let request = NexusRepository::nexus_readonly(&repository_id)
+                        .list(remote_path);
+                    let response = nexus.execute(request).await?;
+                    if format == DirFormat::Json {
+                        let json = response.text().await?;
+                        println!("{json}");
+                    } else {
+                        for entry in response.parsed().await? {
+                            match format {
+                                DirFormat::Short => {
+                                    let leaf = if entry.leaf { "" } else { "/" };
+                                    println!("{}{leaf}", entry.text)
+                                },
+                                DirFormat::RelPath => println!("{}", entry.relative_path),
+                                DirFormat::Uri => println!("{}", entry.resource_uri),
+                                DirFormat::Long => println!("{:10} {} {}\t # {entry:?}", entry.size_on_disk, entry.last_modified, entry.relative_path),
+                                _ => panic!("Unknown format: {format:?}"),
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -118,6 +137,15 @@ async fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum DirFormat {
+    Short,
+    RelPath,
+    Uri,
+    Long,
+    Json,
 }
 
 fn nexus_client() -> anyhow::Result<NexusClient> {
@@ -240,7 +268,10 @@ enum ContentCommands {
     Delete,
     /// List a directory
     #[clap(name="ls")]
-    DirectoryListing,
+    DirectoryListing {
+        #[arg(long,default_value="long")]
+        format: DirFormat,
+    },
 }
 
 #[derive(Subcommand)]

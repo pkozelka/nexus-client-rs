@@ -8,8 +8,8 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use url::Url;
 
-use crate::util;
 use crate::restapi::{APPLICATION_JSON, APPLICATION_XML};
+use crate::util;
 
 type Extractor<A> = dyn FnOnce(&str) -> anyhow::Result<A>;
 
@@ -135,7 +135,7 @@ impl NexusClient {
         let mut vec = Vec::new();
         file.read_to_end(&mut vec).await?;
         let length = file.metadata().await?.len();
-        let url = self.base_url.join(&format!("/service/local/staging/deployByRepositoryId/{staged_repository_id}/{path}"))?;
+        let url = self.base_url.join(&format!("/service/local/staging/deployByRepositoryId/{staged_repository_id}{path}"))?;
         log::debug!("uploading(PUT) to: {url}");
         let http_req = self.client.request(Method::PUT, url.clone())
             .header(CONTENT_LENGTH, length)
@@ -152,7 +152,7 @@ impl NexusClient {
                 anyhow::bail!("Directory does not exist: {}", dir.display());
             }
         }
-        let url = self.base_url.join(&format!("/service/local/repositories/{staged_repository_id}/content/{path}"))?;
+        let url = self.base_url.join(&format!("/service/local/repositories/{staged_repository_id}/content{path}"))?;
         log::debug!("downloading(GET) from: {url}");
         let http_response = self.client.request(Method::GET, url.clone())
             .send().await?;

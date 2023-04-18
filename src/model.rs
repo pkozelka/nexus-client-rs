@@ -20,6 +20,18 @@ pub struct PromoteRequestData {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DirEntry {
+    #[serde(rename="resourceURI")]
+    pub resource_uri: String,
+    pub relative_path: String,
+    pub text: String,
+    pub leaf: bool,
+    pub last_modified: String,
+    pub size_on_disk: i64,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename = "promoteResponse")]
 pub struct PromoteResponse {
     pub data: PromoteResponseData,

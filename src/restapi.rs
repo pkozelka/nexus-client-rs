@@ -134,11 +134,20 @@ impl NexusRepository {
     pub fn delete(&self, path: &str) -> NexusRequest<()> {
         NexusRequest {
             method: Method::DELETE,
-            url_suffix: format!("{}/{path}", self.repo_path),
+            url_suffix: format!("{}{path}", self.repo_path),
             body: "".to_string(),
             content_type: "",
             accept: "",
             extractor: Box::new(|_|Ok(())),
         }
+    }
+
+    pub fn list(&self, path: &str) -> NexusRequest<Vec<model::DirEntry>> {
+        NexusRequest::json_json(
+            Method::GET,
+            format!("{}{path}", self.repo_path),
+            "".to_string(),
+            json_extract_data,
+        )
     }
 }
