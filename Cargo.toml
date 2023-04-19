@@ -19,3 +19,4 @@ url = "2.3.1"
 tokio = { version = "1.27.0", features = ["full"] }
 serde-xml-rs = "0.6.0"
 futures-util = "0.3.28"
+walkdir = "2.3.3"

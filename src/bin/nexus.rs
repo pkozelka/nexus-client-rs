@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 
-use nexus_client::{NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
+use nexus_client::{nexus_sync_up, NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -133,7 +133,19 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Commands::Sync { .. } => todo!(),
+        Commands::Sync { repository_id, local_repo, path, sync_command } => {
+            match sync_command {
+                SyncCommands::Up => {
+                    let nexus = nexus_client()?;
+                    let remote_root = match path {
+                        None => "",
+                        Some(ref rr) => rr
+                    };
+                    nexus_sync_up(&nexus, &repository_id, remote_root, &local_repo).await?;
+                }
+                SyncCommands::Down => todo!()
+            }
+        },
     }
 
     Ok(())

@@ -4,6 +4,7 @@ use reqwest::Response;
 pub use auth::get_credentials;
 pub use auth::nexus_url;
 pub use client::NexusClient;
+pub use remote_sync::nexus_sync_up;
 pub use restapi::{NexusRepository, StagingProfiles, StagingRepositories};
 use restapi::APPLICATION_JSON;
 
@@ -12,6 +13,7 @@ mod auth;
 mod util;
 mod client;
 mod restapi;
+mod remote_sync;
 
 async fn check_status(response: Response) -> anyhow::Result<Response> {
     let status = response.status();
