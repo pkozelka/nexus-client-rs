@@ -13,10 +13,20 @@ log = "0.4.17"
 env_logger = "0.10.0"
 serde = { version = "1.0.159", features=["serde_derive"] }
 serde_json = "1.0.95"
-netrc = "0.4.1"
 netrc-rs = "0.1.2"
 url = "2.3.1"
 tokio = { version = "1.27.0", features = ["full"] }
 serde-xml-rs = "0.6.0"
 futures-util = "0.3.28"
 walkdir = "2.3.3"
+
+# https://stackoverflow.com/questions/66585798/how-to-avoid-dependency-on-libssl-so-10-and-libcrypto-so-10
+[dependencies.openssl]
+version = "0.10.50"
+features = ["vendored"]
+
+
+[profile.release]
+opt-level="z"
+strip="symbols"
+lto="fat"

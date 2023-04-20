@@ -16,7 +16,7 @@ pub async fn nexus_sync_up(nexus: &NexusClient, repository_id: &str, remote_root
             continue;
         }
         let epd = entry_path.display().to_string();
-        let relpath = &epd[root.len()+1..];
+        let relpath = &epd[root.len()..];
         let abspath = format!("{remote_root}/{relpath}");
         println!("* {abspath} <- {epd}");
         //TODO: abspath must start with slash

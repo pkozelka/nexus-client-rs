@@ -1,7 +1,7 @@
-use url::Url;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+use url::Url;
 
 pub fn nexus_url() -> Result<Url, url::ParseError> {
     let nexus_url = match std::env::var("NEXUS_URL") {
@@ -16,11 +16,11 @@ pub fn get_credentials(nexus_url: &Url) -> anyhow::Result<(String, String)> {
     let nexus_host = nexus_url.host().unwrap()
         .to_string();
     log::debug!("...host: {nexus_host}");
-    if let Ok(auth) = std::env::var("NEXUS_CLIENT_AUTH") {
+    if let Ok(auth) = std::env::var("NEXUS_AUTH") {
         return if let Some((user, password)) = auth.split_once(':') {
             Ok((user.to_string(), password.to_string()))
         } else {
-            anyhow::bail!("Invalid auth string in NEXUS_CLIENT_AUTH variable")
+            anyhow::bail!("Invalid auth string in NEXUS_AUTH variable")
         }
     }
     let file = File::open("/home/pk/.netrc")?;
