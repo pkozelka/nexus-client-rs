@@ -64,7 +64,7 @@ pub struct StagingProfileRepository {
     pub profile_type: String,
     pub repository_id: String,
     #[serde(rename = "type")]
-    pub type_field: String,
+    pub repository_type: String,
     pub policy: String,
     pub user_id: String,
     pub user_agent: String,
@@ -120,4 +120,29 @@ pub struct StagingProfile {
 pub struct Properties {
     #[serde(rename = "@class")]
     pub class: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StagingActivity {
+    pub name: String,
+    pub started: String,
+    pub stopped: String,
+    pub events: Vec<StagingActivityEvent>
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StagingActivityEvent {
+    pub timestamp: String,
+    pub name: String,
+    pub severity: i32,
+    pub properties: Vec<StagingProperty>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StagingProperty {
+    pub name: String,
+    pub value: String,
 }

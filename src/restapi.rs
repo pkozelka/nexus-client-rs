@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 
 use crate::client::NexusRequest;
 use crate::model;
-use crate::model::{NexusResponseData, PromoteResponse, StagingProfile, StagingProfileRepository};
+use crate::model::{NexusResponseData, PromoteResponse, StagingActivity, StagingProfile, StagingProfileRepository};
 
 pub const APPLICATION_JSON: &str = "application/json";
 pub const APPLICATION_XML: &str = "application/xml";
@@ -107,11 +107,11 @@ impl StagingRepositories {
         )
     }
 
-    pub fn activity(staged_repository_id: &str) -> NexusRequest<String> {
+    pub fn activity(staged_repository_id: &str) -> NexusRequest<Vec<StagingActivity>> {
         NexusRequest::json_json(Method::GET,
                                 format!("/service/local/staging/repository/{staged_repository_id}/activity"),
                                 "".to_string(),
-                                |text| Ok(text.to_string()),
+                                |text| Ok(serde_json::from_str(text)?),
         )
     }
 }

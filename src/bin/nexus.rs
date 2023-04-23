@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use clap::{Parser, Subcommand, ValueEnum};
 
 use nexus_client::{nexus_sync_up, NexusClient, NexusRepository, StagingProfiles, StagingRepositories};
+use nexus_client::model::StagingProfileRepository;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -34,9 +35,10 @@ async fn main() -> anyhow::Result<()> {
                     let nexus = nexus_client()?;
                     let response = nexus.execute(StagingRepositories::list()).await?;
                     let list = response.parsed().await?;
-                    for repo in list {
-                        println!("{} {} {} # {}", repo.repository_id, repo.profile_id, repo.created, repo.description);
-                        log::debug!("{repo:?}");
+                    for StagingProfileRepository { profile_id, profile_name, created, repository_id, repository_type, transitioning, description, .. } in list {
+                        let t= if transitioning {"[!!!]"} else {""};
+                        println!("{repository_id}({repository_type}{t}) {profile_id}({profile_name}) {created} # {description}");
+                        // log::debug!("{repo:?}");
                     }
                 }
 
@@ -47,12 +49,40 @@ async fn main() -> anyhow::Result<()> {
                     log::info!("{repo:?}");
                 }
 
-                StagingCommands::RepoActivity { repository_id } => {
+                StagingCommands::RepoActivity { repository_id, format } => {
                     let nexus = nexus_client()?;
                     let request = StagingRepositories::activity(&repository_id);
                     let response = nexus.execute(request).await?;
-                    let activity = response.parsed().await?;
-                    println!("{activity:?}"); //TODO
+                    if format == DirFormat::Json {
+                        let text = response.text().await?;
+                        println!("{text}");
+                    } else {
+                        let activities = response.parsed().await?;
+                        match format {
+                            DirFormat::Short => {
+                                for activity in activities {
+                                    let last_event_name = match activity.events.last() {
+                                        None => "?",
+                                        Some(event) => &event.name
+                                    };
+                                    println!("{}: {last_event_name}", activity.name);
+                                }
+                            }
+                            DirFormat::Long => {
+                                println!("Activities for staging repository '{repository_id}'");
+                                for activity in activities {
+                                    println!("\nactivity '{}' for staging repository - started {}, stopped {}", activity.name, activity.started, activity.stopped);
+                                    for event in &activity.events {
+                                        println!("* {} [{}] {}", event.timestamp, event.severity, event.name);
+                                        for prop in &event.properties {
+                                            println!("    {}:{}", prop.name, prop.value);
+                                        }
+                                    }
+                                }
+                            }
+                            _ => todo!()
+                        }
+                    }
                 }
                 StagingCommands::RepoStart { profile_id, description } => {
                     let nexus = nexus_client()?;
@@ -77,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
 
                 StagingCommands::RepoFinish { profile_id, repository_id } => {
                     let nexus = nexus_client()?;
-                    let request = StagingProfiles::promote(&profile_id, &repository_id);
+                    let request = StagingProfiles::finish(&profile_id, &repository_id);
                     let response = nexus.execute(request).await?;
                     let s = response.text().await?;
                     println!("{s:?}");
@@ -227,6 +257,8 @@ enum StagingCommands {
     /// Retrieve current activity status on a staging repository
     RepoActivity {
         repository_id: String,
+        #[arg(long,default_value="long")]
+        format: DirFormat,
     },
     /// Create a new staging repository
     RepoStart {
