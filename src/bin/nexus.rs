@@ -51,12 +51,19 @@ async fn main() -> anyhow::Result<()> {
 
                 StagingCommands::RepoActivity { repository_id, format } => {
                     let nexus = nexus_client()?;
-                    let request = StagingRepositories::activity(&repository_id);
-                    let response = nexus.execute(request).await?;
                     if format == DirFormat::Json {
+                        let request = StagingRepositories::activity(&repository_id);
+                        let response = nexus.execute(request).await?;
+                        let text = response.text().await?;
+                        println!("{text}");
+                    } else if format == DirFormat::Xml {
+                        let request = StagingRepositories::activity_xml(&repository_id);
+                        let response = nexus.execute(request).await?;
                         let text = response.text().await?;
                         println!("{text}");
                     } else {
+                        let request = StagingRepositories::activity(&repository_id);
+                        let response = nexus.execute(request).await?;
                         let activities = response.parsed().await?;
                         match format {
                             DirFormat::Short => {
@@ -188,6 +195,7 @@ enum DirFormat {
     Uri,
     Long,
     Json,
+    Xml,
 }
 
 fn nexus_client() -> anyhow::Result<NexusClient> {

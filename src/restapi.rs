@@ -114,6 +114,15 @@ impl StagingRepositories {
                                 |text| Ok(serde_json::from_str(text)?),
         )
     }
+
+    //TODO more elegant solution would be great here
+    pub fn activity_xml(staged_repository_id: &str) -> NexusRequest<String> {
+        NexusRequest::xml_xml(Method::GET,
+                                format!("/service/local/staging/repository/{staged_repository_id}/activity"),
+                                "".to_string(),
+                                |text| Ok(text.to_string()),
+        )
+    }
 }
 
 pub struct NexusRepository {
