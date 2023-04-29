@@ -1,7 +1,7 @@
 use clap::Subcommand;
 
 use nexus_client::{StagingProfiles, StagingRepositories};
-use nexus_client::model::StagingProfileRepository;
+use nexus_client::model::{StagingProfile, StagingProfileRepository};
 
 use crate::DirFormat;
 
@@ -11,8 +11,31 @@ pub async fn cmd_staging(staging_command: StagingCommands) -> anyhow::Result<()>
             let nexus = crate::nexus_client()?;
             let response = nexus.execute(StagingProfiles::get(&profile)).await?;
             let profile = response.parsed().await?;
-            println!("{} {} mode={} target={}", profile.id, profile.name, profile.mode, profile.promotion_target_repository);
-            log::debug!("{profile:?}");
+            let StagingProfile { resource_uri, id, name, repository_template_id, repository_type, repository_target_id, in_progress, order, deploy_uri, target_groups, finish_notify_roles, promotion_notify_roles, drop_notify_roles, close_rule_sets, promote_rule_sets, promotion_target_repository, mode, finish_notify_creator, promotion_notify_creator, drop_notify_creator, auto_staging_disabled, repositories_searchable, properties } = profile;
+            println!(r##"id={id}
+name={name}
+mode={mode}
+auto_staging_disabled={auto_staging_disabled}
+close_rule_sets={close_rule_sets:?}
+deploy_uri={deploy_uri}
+drop_notify_creator={drop_notify_creator}
+drop_notify_roles={drop_notify_roles:?}
+finish_notify_creator={finish_notify_creator}
+finish_notify_roles={finish_notify_roles:?}
+in_progress={in_progress}
+order={order}
+promotion_target_repository={promotion_target_repository}
+properties={properties:?}
+repository_target_id={repository_target_id}
+repository_template_id={repository_template_id}
+repositories_searchable={repositories_searchable}
+promote_rule_sets={promote_rule_sets:?}
+promotion_notify_creator={promotion_notify_creator}
+promotion_notify_roles={promotion_notify_roles:?}
+repository_type={repository_type}
+resource_uri={resource_uri}
+target_groups={target_groups:?}
+"##);
         }
         StagingCommands::Profiles => {
             let nexus = crate::nexus_client()?;
@@ -145,12 +168,12 @@ pub enum StagingCommands {
     Profiles,
     /// Show one staging profile
     Profile {
-        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile: String,
     },
     /// Show all current staging repositories
     Repos {
-        #[arg(long,default_value="short")]
+        #[arg(long, default_value = "short")]
         format: DirFormat,
     },
     /// Show one staging repository
@@ -158,43 +181,43 @@ pub enum StagingCommands {
         repository_id: String,
     },
     /// Retrieve current activity status on a staging repository
-    #[command(name="activity")]
+    #[command(name = "activity")]
     RepoActivity {
         repository_id: String,
-        #[arg(long,default_value="long")]
+        #[arg(long, default_value = "long")]
         format: DirFormat,
     },
     /// Create a new staging repository
-    #[command(name="start")]
+    #[command(name = "start")]
     RepoStart {
         // TODO: make profile_id optional, defaulting to single profile existing
         // TODO: profile_id could also come from an env var
         // TODO: allow profile id syntax: `@name` to select profile by its name
-        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile_id: String,
-        #[arg(long,default_value="short")]
+        #[arg(long, default_value = "short")]
         format: DirFormat,
         description: Option<String>,
     },
     /// Drop staging repository
-    #[command(name="drop")]
+    #[command(name = "drop")]
     RepoDrop {
-        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile_id: String,
         // TODO: allow repository id syntax: `@desc=string` to select repo by description (must resolve to only one)
         repository_ids: Vec<String>,
     },
     /// Promote (close) staging repository, exposing it to others for consuming
-    #[command(name="promote")]
+    #[command(name = "promote")]
     RepoPromote {
-        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile_id: String,
         repository_id: String,
     },
     /// Finish (release) staging repository into the target repository (typically `releases`)
-    #[command(name="finish")]
+    #[command(name = "finish")]
     RepoFinish {
-        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile_id: String,
         repository_id: String,
     },
