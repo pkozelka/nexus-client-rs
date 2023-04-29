@@ -26,6 +26,14 @@ impl NexusPathSpec {
         }
     }
 
+    /// Use when local part MUST NOT be specified
+    pub fn local_assert_none(&self) -> anyhow::Result<()> {
+        if self.local.is_some() {
+            anyhow::bail!("local part is required to be missing in PathSpec");
+        }
+        Ok(())
+    }
+
     pub fn remote_or_err(&self) -> anyhow::Result<&str> {
         match &self.remote {
             None => anyhow::bail!("remote part is required in PathSpec"),

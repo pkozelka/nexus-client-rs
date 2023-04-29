@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use cmd_content::ContentCommands;
 use cmd_staging::StagingCommands;
-use nexus_client::{nexus_sync_up, NexusClient};
+use nexus_client::{nexus_sync_up, NexusClient, NexusRepository};
 
 use crate::pathspec::NexusPathSpec;
 
@@ -51,6 +51,18 @@ async fn main() -> anyhow::Result<()> {
             println!("  to remote path {:?}", path_spec.remote_or_default());
             todo!()
         },
+        Commands::Remove { remote_name, path_spec } => {
+            //TODO if not --force, require the repository to be open and non-transitioning
+            //TODO support wildcards?
+            path_spec.local_assert_none()?;
+            let remote_path = path_spec.remote_or_err()?;
+            let nexus = crate::nexus_client()?;
+            let request = NexusRepository::nexus_readwrite(&remote_name)
+                .delete(remote_path);
+            let response = nexus.execute(request).await?;
+            response.check().await?;
+            log::warn!("Removed: {remote_path} from repository {remote_name}");
+        }
     }
 
     Ok(())
@@ -121,6 +133,13 @@ enum Commands {
         #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
         path_spec: NexusPathSpec,
     },
+
+    #[clap(name="rm")]
+    Remove {
+        remote_name: String,
+        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
+        path_spec: NexusPathSpec,
+    }
 }
 
 const SEP: &str = "::";
