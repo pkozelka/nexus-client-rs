@@ -31,14 +31,24 @@ async fn main() -> anyhow::Result<()> {
                         log::debug!("{profile:?}");
                     }
                 }
-                StagingCommands::Repos => {
+                StagingCommands::Repos { format } => {
                     let nexus = nexus_client()?;
                     let response = nexus.execute(StagingRepositories::list()).await?;
                     let list = response.parsed().await?;
-                    for StagingProfileRepository { profile_id, profile_name, created, repository_id, repository_type, transitioning, description, .. } in list {
-                        let t= if transitioning {"[!!!]"} else {""};
-                        println!("{repository_id}({repository_type}{t}) {profile_id}({profile_name}) {created} # {description}");
-                        // log::debug!("{repo:?}");
+                    match format {
+                        DirFormat::Short => {
+                            for StagingProfileRepository {repository_id, repository_type, transitioning, description, .. } in list {
+                                let t= if transitioning {"transitioning" } else {"ready"};
+                                println!("{repository_id}\t{repository_type}\t{t}\t{description}");
+                            }
+                        }
+                        DirFormat::Long => {
+                            for repo in list {
+                                // TODO not sure if this is a good choice for the "long" format
+                                println!("{repo:?}");
+                            }
+                        }
+                        _ => todo!()
                     }
                 }
 
@@ -266,7 +276,10 @@ enum StagingCommands {
         profile: String,
     },
     /// Show all current staging repositories
-    Repos,
+    Repos {
+        #[arg(long,default_value="short")]
+        format: DirFormat,
+    },
     /// Show one staging repository
     Repo {
         repository_id: String,
