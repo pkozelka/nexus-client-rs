@@ -263,12 +263,14 @@ enum StagingCommands {
         repository_id: String,
     },
     /// Retrieve current activity status on a staging repository
+    #[command(name="activity")]
     RepoActivity {
         repository_id: String,
         #[arg(long,default_value="long")]
         format: DirFormat,
     },
     /// Create a new staging repository
+    #[command(name="start")]
     RepoStart {
         // TODO: make profile_id optional, defaulting to single profile existing
         // TODO: profile_id could also come from an env var
@@ -279,6 +281,7 @@ enum StagingCommands {
         description: Option<String>,
     },
     /// Drop staging repository
+    #[command(name="drop")]
     RepoDrop {
         #[arg(short,long)]
         profile_id: String,
@@ -286,12 +289,14 @@ enum StagingCommands {
         repository_id: String,
     },
     /// Promote (close) staging repository, exposing it to others for consuming
+    #[command(name="promote")]
     RepoPromote {
         #[arg(short,long)]
         profile_id: String,
         repository_id: String,
     },
     /// Finish (release) staging repository into the target repository (typically `releases`)
+    #[command(name="finish")]
     RepoFinish {
         #[arg(short,long)]
         profile_id: String,
