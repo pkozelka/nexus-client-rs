@@ -126,9 +126,16 @@ pub struct NexusRepository {
     repo_path: String,
 }
 
+const STAGING_PREFIX: &str = "@staging:";
+
 impl NexusRepository {
     pub fn nexus_readwrite(repository_id: &str) -> Self {
-        let repo_path = format!("/service/local/staging/deployByRepositoryId/{repository_id}");
+        let repo_path = if repository_id.starts_with(STAGING_PREFIX) {
+            let repository_id = &repository_id[STAGING_PREFIX.len()..];
+            format!("/service/local/staging/deployByRepositoryId/{repository_id}")
+        } else {
+            format!("/service/local/repositories/{repository_id}/content")
+        };
         Self { repo_path }
     }
 
