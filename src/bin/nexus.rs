@@ -253,7 +253,7 @@ enum StagingCommands {
     Profiles,
     /// Show one staging profile
     Profile {
-        #[arg(short,long)]
+        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile: String,
     },
     /// Show all current staging repositories
@@ -275,7 +275,7 @@ enum StagingCommands {
         // TODO: make profile_id optional, defaulting to single profile existing
         // TODO: profile_id could also come from an env var
         // TODO: allow profile id syntax: `@name` to select profile by its name
-        #[arg(short,long)]
+        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
         #[arg(short,long)]
         description: Option<String>,
@@ -283,7 +283,7 @@ enum StagingCommands {
     /// Drop staging repository
     #[command(name="drop")]
     RepoDrop {
-        #[arg(short,long)]
+        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
         // TODO: allow repository id syntax: `@desc=string` to select repo by description (must resolve to only one)
         repository_id: String,
@@ -291,14 +291,14 @@ enum StagingCommands {
     /// Promote (close) staging repository, exposing it to others for consuming
     #[command(name="promote")]
     RepoPromote {
-        #[arg(short,long)]
+        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
         repository_id: String,
     },
     /// Finish (release) staging repository into the target repository (typically `releases`)
     #[command(name="finish")]
     RepoFinish {
-        #[arg(short,long)]
+        #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
         repository_id: String,
     },
