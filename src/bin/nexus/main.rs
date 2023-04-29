@@ -20,12 +20,8 @@ async fn main() -> anyhow::Result<()> {
         Commands::Staging { staging_command } => {
             cmd_staging::cmd_staging(staging_command).await?;
         }
-        Commands::Content { repository_id, remote_path, content_command: deploy_command } => {
-            let remote_path = match remote_path {
-                None => "/",
-                Some(ref remote_path) => remote_path
-            };
-            cmd_content::cmd_content(deploy_command, &repository_id, remote_path).await?;
+        Commands::Content { repository_id, content_command } => {
+            cmd_content::cmd_content(content_command, &repository_id).await?;
         }
         Commands::Sync { repository_id, local_repo, path, sync_command } => {
             match sync_command {
@@ -84,8 +80,6 @@ enum Commands {
     Content {
         #[arg(short,long="repo")]
         repository_id: String,
-        #[arg(short='p',long)]
-        remote_path: Option<String>,
         #[command(subcommand)]
         content_command: ContentCommands,
     },

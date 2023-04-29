@@ -6,30 +6,32 @@ use nexus_client::NexusRepository;
 
 use crate::DirFormat;
 
-pub async fn cmd_content(deploy_command: ContentCommands, repository_id: &str, remote_path: &str) -> anyhow::Result<()> {
-    match deploy_command {
-        ContentCommands::Upload { local_path } => {
+pub async fn cmd_content(content_command: ContentCommands, repository_id: &str) -> anyhow::Result<()> {
+    match content_command {
+        ContentCommands::Upload { local_path, path } => {
+            //TODO if not --force, require the repository to be open and non-transitioning
             let nexus = crate::nexus_client()?;
-            let url = nexus.upload_file(&repository_id, &local_path, remote_path).await?;
+            let url = nexus.upload_file(&repository_id, &local_path, &path).await?;
             log::info!("File {} uploaded to {url}", local_path.display());
         }
-        ContentCommands::Download { local_path } => {
+        ContentCommands::Download { local_path, path } => {
             let nexus = crate::nexus_public_client()?;
-            let url = nexus.download_file(&repository_id, &local_path, remote_path).await?;
+            let url = nexus.download_file(&repository_id, &local_path, &path).await?;
             log::info!("File {} downloaded from {url}", local_path.display());
         }
-        ContentCommands::Delete => {
+        ContentCommands::Delete { path } => {
+            //TODO if not --force, require the repository to be open and non-transitioning
             let nexus = crate::nexus_client()?;
             let request = NexusRepository::nexus_readwrite(&repository_id)
-                .delete(remote_path);
+                .delete(&path);
             let response = nexus.execute(request).await?;
             response.check().await?;
-            println!("Deleted: {remote_path} from repository {repository_id}");
+            log::warn!("Deleted: {path} from repository {repository_id}");
         }
-        ContentCommands::DirectoryListing { format } => {
+        ContentCommands::DirectoryListing { format, path } => {
             let nexus = crate::nexus_public_client()?;
             let request = NexusRepository::nexus_readonly(&repository_id)
-                .list(remote_path);
+                .list(&path);
             let response = nexus.execute(request).await?;
             if format == DirFormat::Json {
                 let json = response.text().await?;
@@ -67,20 +69,32 @@ pub enum ContentCommands {
     Upload {
         #[arg(short,long)]
         local_path: PathBuf,
+        /// remote path
+        #[clap(default_value="/")]
+        path: String,
     },
     /// Download single file
     #[clap(name="get")]
     Download {
         #[arg(short,long)]
         local_path: PathBuf,
+        /// remote path
+        #[clap(default_value="/")]
+        path: String,
     },
     /// Delete a path (file of directory with its contents)
     #[clap(name="rm")]
-    Delete,
+    Delete {
+        /// remote path
+        path: String,
+    },
     /// List a directory
     #[clap(name="ls")]
     DirectoryListing {
         #[arg(long,default_value="short")]
         format: DirFormat,
+        /// remote path
+        #[clap(default_value="/")]
+        path: String,
     },
 }
