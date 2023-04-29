@@ -6,8 +6,11 @@ use cmd_content::ContentCommands;
 use cmd_staging::StagingCommands;
 use nexus_client::{nexus_sync_up, NexusClient};
 
+use crate::pathspec::NexusPathSpec;
+
 mod cmd_staging;
 mod cmd_content;
+mod pathspec;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -35,6 +38,18 @@ async fn main() -> anyhow::Result<()> {
                 }
                 SyncCommands::Down => todo!()
             }
+        },
+        Commands::Pull { remote_name, path_spec } => {
+            println!("pulling from repository {remote_name}");
+            println!(" to   local path {:?}", path_spec.local_or_err()?);
+            println!("from remote path {:?}", path_spec.remote_or_default());
+            todo!()
+        },
+        Commands::Push { remote_name, path_spec } => {
+            println!("pushing into repository {remote_name}");
+            println!(" from local path {:?}", path_spec.local_or_err()?);
+            println!("  to remote path {:?}", path_spec.remote_or_default());
+            todo!()
         },
     }
 
@@ -94,7 +109,21 @@ enum Commands {
         #[command(subcommand)]
         sync_command: SyncCommands,
     },
+
+    Pull {
+        remote_name: String,
+        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
+        path_spec: NexusPathSpec,
+    },
+
+    Push {
+        remote_name: String,
+        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
+        path_spec: NexusPathSpec,
+    },
 }
+
+const SEP: &str = "::";
 
 #[derive(Subcommand)]
 enum SyncCommands {
