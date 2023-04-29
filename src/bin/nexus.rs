@@ -91,12 +91,21 @@ async fn main() -> anyhow::Result<()> {
                         }
                     }
                 }
-                StagingCommands::RepoStart { profile_id, description } => {
+                StagingCommands::RepoStart { profile_id, format, description } => {
                     let nexus = nexus_client()?;
                     let request = StagingProfiles::start(&profile_id, &description.unwrap_or("".to_string()));
                     let response = nexus.execute(request).await?;
-                    let staged_repo_id = response.parsed().await?;
-                    println!("{staged_repo_id:?}");
+                    let response = response.parsed().await?;
+                    let staged_repo_id = response.data.staged_repository_id.ok_or( anyhow::anyhow!("No ID returned"))?;
+                    match format {
+                        DirFormat::Short => {
+                            println!("{staged_repo_id}");
+                        }
+                        DirFormat::Long => {
+                            println!("{staged_repo_id}\t{}", response.data.description.unwrap_or("".to_string()));
+                        }
+                        _ => panic!("Unsupported format: {format:?}"),
+                    }
                 }
                 StagingCommands::RepoDrop { profile_id, repository_id } => {
                     let nexus = nexus_client()?;
@@ -277,7 +286,8 @@ enum StagingCommands {
         // TODO: allow profile id syntax: `@name` to select profile by its name
         #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
-        #[arg(short,long)]
+        #[arg(long,default_value="short")]
+        format: DirFormat,
         description: Option<String>,
     },
     /// Drop staging repository

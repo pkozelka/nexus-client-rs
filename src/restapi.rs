@@ -35,7 +35,7 @@ impl StagingProfiles {
         )
     }
 
-    pub fn start(profile_id_key: &str, description: &str) -> NexusRequest<Option<String>> {
+    pub fn start(profile_id_key: &str, description: &str) -> NexusRequest<PromoteResponse> {
         let body = model::PromoteRequest {
             data: model::PromoteRequestData {
                 staged_repository_id: None,
@@ -47,10 +47,7 @@ impl StagingProfiles {
         NexusRequest::xml_xml(Method::POST,
                               format!("/service/local/staging/profiles/{profile_id_key}/start"),
                               xml_body,
-                              |text| {
-                                  let promote_response: PromoteResponse = serde_xml_rs::from_str(text)?;
-                                  Ok(promote_response.data.staged_repository_id)
-                              },
+                              |text| Ok(serde_xml_rs::from_str(text)?),
         )
     }
 
