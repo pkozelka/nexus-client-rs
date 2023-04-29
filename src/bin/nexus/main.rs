@@ -48,8 +48,6 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum DirFormat {
     Short,
-    RelPath,
-    Uri,
     Long,
     Json,
     Xml,

@@ -41,9 +41,14 @@ pub async fn cmd_content(deploy_command: ContentCommands, repository_id: &str, r
                             let leaf = if entry.leaf { "" } else { "/" };
                             println!("{}{leaf}", entry.text)
                         },
-                        DirFormat::RelPath => println!("{}", entry.relative_path),
-                        DirFormat::Uri => println!("{}", entry.resource_uri),
-                        DirFormat::Long => println!("{:10} {} {}\t # {entry:?}", entry.size_on_disk, entry.last_modified, entry.relative_path),
+                        DirFormat::Long => {
+                            let size_or_dir = if entry.size_on_disk == -1 {
+                                " DIRECTORY".to_string()
+                            } else {
+                                format!("{:10}", entry.size_on_disk)
+                            };
+                            println!("{}\t{size_or_dir}\t{}", entry.last_modified, entry.relative_path)
+                        },
                         _ => panic!("Unknown format: {format:?}"),
                     }
                 }
@@ -75,7 +80,7 @@ pub enum ContentCommands {
     /// List a directory
     #[clap(name="ls")]
     DirectoryListing {
-        #[arg(long,default_value="long")]
+        #[arg(long,default_value="short")]
         format: DirFormat,
     },
 }
