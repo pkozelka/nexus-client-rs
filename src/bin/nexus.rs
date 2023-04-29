@@ -117,11 +117,16 @@ async fn main() -> anyhow::Result<()> {
                         _ => panic!("Unsupported format: {format:?}"),
                     }
                 }
-                StagingCommands::RepoDrop { profile_id, repository_id } => {
+                StagingCommands::RepoDrop { profile_id, repository_ids } => {
+                    if repository_ids.is_empty() {
+                        anyhow::bail!("Nothing to drop!");
+                    }
                     let nexus = nexus_client()?;
-                    let response = nexus.execute(StagingProfiles::drop(&profile_id, &repository_id)).await?;
-                    response.check().await?;
-                    log::warn!("Staging repository with profile '{profile_id}' was successfully dropped: {repository_id}");
+                    for repository_id in repository_ids {
+                        let response = nexus.execute(StagingProfiles::drop(&profile_id, &repository_id)).await?;
+                        response.check().await?;
+                        log::warn!("Staging repository with profile '{profile_id}' was successfully dropped: {repository_id}");
+                    }
                 }
                 StagingCommands::RepoPromote { profile_id, repository_id } => {
                     let nexus = nexus_client()?;
@@ -309,7 +314,7 @@ enum StagingCommands {
         #[arg(short,long,env="NEXUS_STAGING_PROFILE")]
         profile_id: String,
         // TODO: allow repository id syntax: `@desc=string` to select repo by description (must resolve to only one)
-        repository_id: String,
+        repository_ids: Vec<String>,
     },
     /// Promote (close) staging repository, exposing it to others for consuming
     #[command(name="promote")]
