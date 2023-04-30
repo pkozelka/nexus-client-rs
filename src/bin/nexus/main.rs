@@ -2,14 +2,12 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 
-use cmd_content::ContentCommands;
 use cmd_staging::StagingCommands;
 use nexus_client::{http_upload, NexusClient, NexusRepository};
 
 use crate::nexus_uri::NexusRemoteUri;
 
 mod cmd_staging;
-mod cmd_content;
 mod nexus_uri;
 
 #[tokio::main]
@@ -23,12 +21,30 @@ async fn main() -> anyhow::Result<()> {
         Commands::Staging { staging_command } => {
             cmd_staging::cmd_staging(staging_command).await?;
         }
-        Commands::Content { repository_id, content_command } => {
-            cmd_content::cmd_content(content_command, &repository_id).await?;
-        }
         Commands::Download { local_path, nexus_uri, } => {
             log::info!("downloading {local_path:?} from {nexus_uri}");
-            todo!()
+            let nexus = nexus_public_client()?;
+            match (local_path.is_dir(), nexus_uri.is_dir()) {
+                (true, true) => {
+                    // tree download
+                    todo!("tree download")
+                }
+                (local_is_dir, false) => {
+                    // single file download
+                    let local_path = if local_is_dir {
+                        let file_name = match nexus_uri.repo_path.rfind("/") {
+                            None => panic!("There must always be at least one slash: {nexus_uri}"),
+                            Some(index) => &nexus_uri.repo_path[index+1..]
+                        };
+                        local_path.join(file_name)
+                    } else {
+                        local_path
+                    };
+                    let url = nexus.download_file(&nexus_uri.repo_id, &local_path, &nexus_uri.repo_path).await?;
+                    log::info!("File {} downloaded from {url}", local_path.display());
+                }
+                (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir} -> remotedir({remote_is_dir}))")
+            }
         },
         Commands::Upload { local_path, nexus_uri} => {
             log::info!("uploading {local_path:?} to {nexus_uri}");
@@ -36,10 +52,21 @@ async fn main() -> anyhow::Result<()> {
             // dir-dir checking TODO perhaps move this into upload function?
             match (local_path.is_dir(), nexus_uri.is_dir()) {
                 (true, true) => {
+                    // tree upload
                     http_upload(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
                 }
-                //TODO file -> dir will be ok, we just add the name
-                //TODO file -> file is completely ok
+                (false, remote_is_dir) => {
+                    // single file upload
+                    let remote_path = if remote_is_dir {
+                        // file -> dir is ok, we just add the name
+                        format!("{}{}", nexus_uri.repo_path, local_path.file_name().unwrap().to_string_lossy())
+                    } else {
+                        // file -> file is completely ok
+                        nexus_uri.repo_path.clone()
+                    };
+                    let url = nexus.upload_file(&nexus_uri.repo_id, &local_path, &remote_path).await?;
+                    log::info!("File {} uploaded to {url}", local_path.display());
+                }
                 (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir} -> remotedir({remote_is_dir}))")
             }
         },
@@ -124,13 +151,6 @@ enum Commands {
         #[command(subcommand)]
         staging_command: StagingCommands,
     },
-    /// Manage repository content
-    Content {
-        #[arg(short,long="repo")]
-        repository_id: String,
-        #[command(subcommand)]
-        content_command: ContentCommands,
-    },
     Download {
         local_path: PathBuf,
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
@@ -158,12 +178,4 @@ enum Commands {
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
-}
-
-#[derive(Subcommand)]
-enum SyncCommands {
-    /// Sync files to nexus repository
-    Up,
-    /// Sync files from nexus repository
-    Down,
 }
