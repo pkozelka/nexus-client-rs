@@ -6,11 +6,11 @@ use cmd_content::ContentCommands;
 use cmd_staging::StagingCommands;
 use nexus_client::{http_upload, NexusClient, NexusRepository};
 
-use crate::pathspec::{NexusPathSpec, NexusRemoteUri};
+use crate::nexus_uri::NexusRemoteUri;
 
 mod cmd_staging;
 mod cmd_content;
-mod pathspec;
+mod nexus_uri;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -27,32 +27,29 @@ async fn main() -> anyhow::Result<()> {
             cmd_content::cmd_content(content_command, &repository_id).await?;
         }
         Commands::Download { local_path, nexus_uri, } => {
-            log::info!("downloading {local_path:?} from {nexus_uri:?}");
+            log::info!("downloading {local_path:?} from {nexus_uri}");
             todo!()
         },
         Commands::Upload { local_path, nexus_uri} => {
-            log::info!("uploading {local_path:?} to {nexus_uri:?}");
+            log::info!("uploading {local_path:?} to {nexus_uri}");
             let nexus = nexus_client()?;
             //TODO add dir-dir checking
             http_upload(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
         },
-        Commands::Remove { repo_id, path_spec } => {
+        Commands::Remove { nexus_uri } => {
             //TODO if not --force, require the repository to be open and non-transitioning
             //TODO support wildcards?
-            path_spec.local_assert_none()?;
-            let remote_path = path_spec.remote_or_err()?;
             let nexus = crate::nexus_client()?;
-            let request = NexusRepository::nexus_readwrite(&repo_id)
-                .delete(remote_path);
+            let request = NexusRepository::nexus_readwrite(&nexus_uri.repo_id)
+                .delete(&nexus_uri.repo_path);
             let response = nexus.execute(request).await?;
             response.check().await?;
-            log::warn!("Removed: {remote_path} from repository {repo_id}");
+            log::warn!("Removed: {nexus_uri}");
         }
-        Commands::List { format, repo_id, path_spec } => {
+        Commands::List { format, nexus_uri } => {
             let nexus = crate::nexus_public_client()?;
-            path_spec.local_assert_none()?;
-            let remote_path = path_spec.remote_or_default();
-            let request = NexusRepository::nexus_readonly(&repo_id)
+            let remote_path = nexus_uri.repo_path;
+            let request = NexusRepository::nexus_readonly(&nexus_uri.repo_id)
                 .list(&remote_path);
             let response = nexus.execute(request).await?;
             if format == DirFormat::Json {
@@ -67,11 +64,11 @@ async fn main() -> anyhow::Result<()> {
                         },
                         DirFormat::Long => {
                             let size_or_dir = if entry.size_on_disk == -1 {
-                                " DIRECTORY".to_string()
+                                "/".to_string()
                             } else {
-                                format!("{:10}", entry.size_on_disk)
+                                format!("{}", entry.size_on_disk)
                             };
-                            println!("{}\t{size_or_dir}\t{}", entry.last_modified, entry.relative_path)
+                            println!("{}\t{size_or_dir:>10}\t{}", entry.last_modified, entry.relative_path)
                         },
                         _ => panic!("Unknown format: {format:?}"),
                     }
@@ -143,17 +140,15 @@ enum Commands {
     List {
         #[arg(long,default_value="short")]
         format: DirFormat,
-        repo_id: String,
-        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
-        path_spec: NexusPathSpec,
+        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        nexus_uri: NexusRemoteUri,
     },
 
     /// Remove a path on remote repo (file of directory with its contents)
     #[clap(name="rm")]
     Remove {
-        repo_id: String,
-        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
-        path_spec: NexusPathSpec,
+        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        nexus_uri: NexusRemoteUri,
     },
 }
 
