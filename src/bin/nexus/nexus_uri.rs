@@ -13,8 +13,15 @@ pub struct NexusRemoteUri {
 }
 
 impl NexusRemoteUri {
-    pub fn is_directory(&self) -> bool {
+    pub fn is_dir(&self) -> bool {
         self.repo_path.ends_with('/')
+    }
+
+    pub fn repo_path_dir_or_err(&self) -> anyhow::Result<&str> {
+        if !self.is_dir() {
+            anyhow::bail!("Directory path expected: {self}");
+        }
+        Ok(&self.repo_path)
     }
 }
 

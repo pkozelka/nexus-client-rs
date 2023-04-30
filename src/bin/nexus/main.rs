@@ -33,12 +33,20 @@ async fn main() -> anyhow::Result<()> {
         Commands::Upload { local_path, nexus_uri} => {
             log::info!("uploading {local_path:?} to {nexus_uri}");
             let nexus = nexus_client()?;
-            //TODO add dir-dir checking
-            http_upload(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
+            // dir-dir checking TODO perhaps move this into upload function?
+            match (local_path.is_dir(), nexus_uri.is_dir()) {
+                (true, true) => {
+                    http_upload(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
+                }
+                //TODO file -> dir will be ok, we just add the name
+                //TODO file -> file is completely ok
+                (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir} -> remotedir({remote_is_dir}))")
+            }
         },
         Commands::Remove { nexus_uri } => {
             //TODO if not --force, require the repository to be open and non-transitioning
             //TODO support wildcards?
+            //TODO if remote specified is not dir, make sure it really is not dir on nexus, otherwise fail (caller must prove to be aware that he deletes a directory!)
             let nexus = crate::nexus_client()?;
             let request = NexusRepository::nexus_readwrite(&nexus_uri.repo_id)
                 .delete(&nexus_uri.repo_path);
@@ -48,9 +56,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::List { format, nexus_uri } => {
             let nexus = crate::nexus_public_client()?;
-            let remote_path = nexus_uri.repo_path;
+            let remote_dir = nexus_uri.repo_path_dir_or_err()?;
             let request = NexusRepository::nexus_readonly(&nexus_uri.repo_id)
-                .list(&remote_path);
+                .list(remote_dir);
             let response = nexus.execute(request).await?;
             if format == DirFormat::Json {
                 let json = response.text().await?;
