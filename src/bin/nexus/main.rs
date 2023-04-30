@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Parser, Subcommand, ValueEnum};
 
 use cmd_content::ContentCommands;
@@ -26,30 +24,20 @@ async fn main() -> anyhow::Result<()> {
         Commands::Content { repository_id, content_command } => {
             cmd_content::cmd_content(content_command, &repository_id).await?;
         }
-        Commands::Sync { repository_id, local_repo, path, sync_command } => {
-            match sync_command {
-                SyncCommands::Up => {
-                    let nexus = nexus_client()?;
-                    let remote_root = match path {
-                        None => "",
-                        Some(ref rr) => rr
-                    };
-                    nexus_sync_up(&nexus, &repository_id, remote_root, &local_repo).await?;
-                }
-                SyncCommands::Down => todo!()
-            }
-        },
-        Commands::Pull { remote_name, path_spec } => {
-            println!("pulling from repository {remote_name}");
+        Commands::Pull { repo_id, path_spec } => {
+            println!("pulling from repository {repo_id}");
             println!(" to   local path {:?}", path_spec.local_or_err()?);
             println!("from remote path {:?}", path_spec.remote_or_default());
             todo!()
         },
-        Commands::Push { remote_name, path_spec } => {
-            println!("pushing into repository {remote_name}");
-            println!(" from local path {:?}", path_spec.local_or_err()?);
-            println!("  to remote path {:?}", path_spec.remote_or_default());
-            todo!()
+        Commands::Push { repo_id, path_spec } => {
+            let local_path = path_spec.local_or_err()?;
+            let remote_path = path_spec.remote_or_default();
+            log::info!("pushing to {repo_id}: {}::{remote_path}", local_path.display());
+            let nexus = nexus_client()?;
+            let remote_root = remote_path;
+            //TODO add dir-dir checking
+            nexus_sync_up(&nexus, &repo_id, remote_root, local_path).await?;
         },
         Commands::Remove { repo_id, path_spec } => {
             //TODO if not --force, require the repository to be open and non-transitioning
@@ -141,26 +129,14 @@ enum Commands {
         #[command(subcommand)]
         content_command: ContentCommands,
     },
-    /// Bulk content synchronization
-    Sync {
-        #[arg(short,long="repo")]
-        repository_id: String,
-        #[arg(short,long)]
-        local_repo: PathBuf,
-        #[arg(short='p',long,default_value="/")]
-        path: Option<String>,
-        #[command(subcommand)]
-        sync_command: SyncCommands,
-    },
-
     Pull {
-        remote_name: String,
+        repo_id: String,
         #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
         path_spec: NexusPathSpec,
     },
 
     Push {
-        remote_name: String,
+        repo_id: String,
         #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
         path_spec: NexusPathSpec,
     },

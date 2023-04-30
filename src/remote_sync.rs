@@ -17,8 +17,8 @@ pub async fn nexus_sync_up(nexus: &NexusClient, repository_id: &str, remote_root
         }
         let epd = entry_path.display().to_string();
         let relpath = &epd[root.len()..];
-        let abspath = format!("{remote_root}/{relpath}");
-        println!("* {abspath} <- {epd}");
+        let abspath = format!("{remote_root}{relpath}");
+        println!("* {epd} -> {abspath}");
         //TODO: abspath must start with slash
         nexus.upload_file(repository_id, entry_path, &abspath).await?;
     }
