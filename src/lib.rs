@@ -4,7 +4,7 @@ use reqwest::Response;
 pub use auth::get_credentials;
 pub use auth::nexus_url;
 pub use client::NexusClient;
-pub use remote_sync::nexus_sync_up;
+pub use remote_sync::http_upload;
 pub use restapi::{NexusRepository, StagingProfiles, StagingRepositories};
 use restapi::APPLICATION_JSON;
 

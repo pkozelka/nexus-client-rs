@@ -1,10 +1,12 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand, ValueEnum};
 
 use cmd_content::ContentCommands;
 use cmd_staging::StagingCommands;
-use nexus_client::{nexus_sync_up, NexusClient, NexusRepository};
+use nexus_client::{http_upload, NexusClient, NexusRepository};
 
-use crate::pathspec::NexusPathSpec;
+use crate::pathspec::{NexusPathSpec, NexusRemoteUri};
 
 mod cmd_staging;
 mod cmd_content;
@@ -24,20 +26,15 @@ async fn main() -> anyhow::Result<()> {
         Commands::Content { repository_id, content_command } => {
             cmd_content::cmd_content(content_command, &repository_id).await?;
         }
-        Commands::Pull { repo_id, path_spec } => {
-            println!("pulling from repository {repo_id}");
-            println!(" to   local path {:?}", path_spec.local_or_err()?);
-            println!("from remote path {:?}", path_spec.remote_or_default());
+        Commands::Download { local_path, nexus_uri, } => {
+            log::info!("downloading {local_path:?} from {nexus_uri:?}");
             todo!()
         },
-        Commands::Push { repo_id, path_spec } => {
-            let local_path = path_spec.local_or_err()?;
-            let remote_path = path_spec.remote_or_default();
-            log::info!("pushing to {repo_id}: {}::{remote_path}", local_path.display());
+        Commands::Upload { local_path, nexus_uri} => {
+            log::info!("uploading {local_path:?} to {nexus_uri:?}");
             let nexus = nexus_client()?;
-            let remote_root = remote_path;
             //TODO add dir-dir checking
-            nexus_sync_up(&nexus, &repo_id, remote_root, local_path).await?;
+            http_upload(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
         },
         Commands::Remove { repo_id, path_spec } => {
             //TODO if not --force, require the repository to be open and non-transitioning
@@ -129,16 +126,16 @@ enum Commands {
         #[command(subcommand)]
         content_command: ContentCommands,
     },
-    Pull {
-        repo_id: String,
-        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
-        path_spec: NexusPathSpec,
+    Download {
+        local_path: PathBuf,
+        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        nexus_uri: NexusRemoteUri,
     },
 
-    Push {
-        repo_id: String,
-        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
-        path_spec: NexusPathSpec,
+    Upload {
+        local_path: PathBuf,
+        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        nexus_uri: NexusRemoteUri,
     },
 
     /// List a directory
@@ -157,10 +154,8 @@ enum Commands {
         repo_id: String,
         #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
         path_spec: NexusPathSpec,
-    }
+    },
 }
-
-const SEP: &str = "::";
 
 #[derive(Subcommand)]
 enum SyncCommands {
