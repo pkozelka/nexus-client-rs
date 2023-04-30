@@ -3,6 +3,7 @@ use std::path::Path;
 use futures_util::StreamExt;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, USER_AGENT};
 use reqwest::Method;
+use reqwest::redirect::Policy;
 use serde::de::DeserializeOwned;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -88,6 +89,7 @@ impl NexusClient {
         headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
         headers.insert(AUTHORIZATION,  util::basic_auth(user, Some(password)));
         let client = reqwest::Client::builder()
+            .redirect(Policy::none())
             .default_headers(headers)
             .build()?;
         Ok(Self {
@@ -100,6 +102,7 @@ impl NexusClient {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
         let client = reqwest::Client::builder()
+            .redirect(Policy::none())
             .default_headers(headers)
             .build()?;
         Ok(Self {

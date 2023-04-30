@@ -51,17 +51,48 @@ async fn main() -> anyhow::Result<()> {
             println!("  to remote path {:?}", path_spec.remote_or_default());
             todo!()
         },
-        Commands::Remove { remote_name, path_spec } => {
+        Commands::Remove { repo_id, path_spec } => {
             //TODO if not --force, require the repository to be open and non-transitioning
             //TODO support wildcards?
             path_spec.local_assert_none()?;
             let remote_path = path_spec.remote_or_err()?;
             let nexus = crate::nexus_client()?;
-            let request = NexusRepository::nexus_readwrite(&remote_name)
+            let request = NexusRepository::nexus_readwrite(&repo_id)
                 .delete(remote_path);
             let response = nexus.execute(request).await?;
             response.check().await?;
-            log::warn!("Removed: {remote_path} from repository {remote_name}");
+            log::warn!("Removed: {remote_path} from repository {repo_id}");
+        }
+        Commands::List { format, repo_id, path_spec } => {
+            let nexus = crate::nexus_public_client()?;
+            path_spec.local_assert_none()?;
+            let remote_path = path_spec.remote_or_default();
+            let request = NexusRepository::nexus_readonly(&repo_id)
+                .list(&remote_path);
+            let response = nexus.execute(request).await?;
+            if format == DirFormat::Json {
+                let json = response.text().await?;
+                println!("{json}");
+            } else {
+                for entry in response.parsed().await? {
+                    match format {
+                        DirFormat::Short => {
+                            let leaf = if entry.leaf { "" } else { "/" };
+                            println!("{}{leaf}", entry.text)
+                        },
+                        DirFormat::Long => {
+                            let size_or_dir = if entry.size_on_disk == -1 {
+                                " DIRECTORY".to_string()
+                            } else {
+                                format!("{:10}", entry.size_on_disk)
+                            };
+                            println!("{}\t{size_or_dir}\t{}", entry.last_modified, entry.relative_path)
+                        },
+                        _ => panic!("Unknown format: {format:?}"),
+                    }
+                }
+            }
+
         }
     }
 
@@ -134,9 +165,20 @@ enum Commands {
         path_spec: NexusPathSpec,
     },
 
+    /// List a directory
+    #[clap(name="ls")]
+    List {
+        #[arg(long,default_value="short")]
+        format: DirFormat,
+        repo_id: String,
+        #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
+        path_spec: NexusPathSpec,
+    },
+
+    /// Remove a path on remote repo (file of directory with its contents)
     #[clap(name="rm")]
     Remove {
-        remote_name: String,
+        repo_id: String,
         #[arg(value_parser = clap::value_parser!(NexusPathSpec))]
         path_spec: NexusPathSpec,
     }

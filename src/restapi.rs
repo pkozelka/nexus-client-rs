@@ -140,6 +140,11 @@ impl NexusRepository {
     }
 
     pub fn nexus_readonly(repository_id: &str) -> Self {
+        let repository_id = if repository_id.starts_with(STAGING_PREFIX) {
+            &repository_id[STAGING_PREFIX.len()..]
+        } else {
+            repository_id
+        };
         let repo_path = format!("/service/local/repositories/{repository_id}/content");
         Self { repo_path }
     }
