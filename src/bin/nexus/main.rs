@@ -9,6 +9,7 @@ use crate::nexus_uri::NexusRemoteUri;
 
 mod cmd_staging;
 mod nexus_uri;
+mod cmd_list;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -83,33 +84,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::List { format, nexus_uri } => {
             let nexus = crate::nexus_public_client()?;
-            let remote_dir = nexus_uri.repo_path_dir_or_err()?;
-            let request = NexusRepository::nexus_readonly(&nexus_uri.repo_id)
-                .list(remote_dir);
-            let response = nexus.execute(request).await?;
-            if format == DirFormat::Json {
-                let json = response.text().await?;
-                println!("{json}");
-            } else {
-                for entry in response.parsed().await? {
-                    match format {
-                        DirFormat::Short => {
-                            let leaf = if entry.leaf { "" } else { "/" };
-                            println!("{}{leaf}", entry.text)
-                        },
-                        DirFormat::Long => {
-                            let size_or_dir = if entry.size_on_disk == -1 {
-                                "/".to_string()
-                            } else {
-                                format!("{}", entry.size_on_disk)
-                            };
-                            println!("{}\t{size_or_dir:>10}\t{}", entry.last_modified, entry.relative_path)
-                        },
-                        _ => panic!("Unknown format: {format:?}"),
-                    }
-                }
-            }
-
+            cmd_list::cmd_list(format, &nexus_uri, nexus).await?;
         }
     }
 
