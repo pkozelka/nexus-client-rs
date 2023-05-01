@@ -28,12 +28,12 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
         return Ok(())
     }
 
-    let (sender, mut receiver) = tokio::sync::mpsc::channel::<DirChunk>(10);
+    let (sender, mut receiver) = tokio::sync::mpsc::channel::<DirChunk>(1000);
     sender.clone().send(DirChunk {
         container: None,
         entries,
     }).await?;
-    /// TODO PROBLEM: this loop never ends
+    let mut counter = 1;
     while let Some(chunk) = receiver.recv().await {
         if let Some(container) = chunk.container {
             log::debug!("CONTAINER: {container:?}");
@@ -45,6 +45,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
         files.into_iter().for_each(|entry| print_entry(format, entry));
         // recurse into subdirs
         for entry in subdirs {
+            counter += 1;
             let nexus = nexus.clone();
             let sender = sender.clone();
             let repo_id = nexus_uri.repo_id.clone();
@@ -63,6 +64,9 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
                 }
             }).await?;
         }
+        counter -= 1;
+        log::info!("counter: {counter}");
+        if counter == 0 { break }
     }
     Ok(())
 }
