@@ -123,7 +123,7 @@ impl StagingRepositories {
 }
 
 pub struct NexusRepository {
-    repo_path: String,
+    pub/*todo just for now*/ repo_path: String,
 }
 
 const STAGING_PREFIX: &str = "@staging:";

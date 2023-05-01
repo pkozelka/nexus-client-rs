@@ -82,9 +82,9 @@ async fn main() -> anyhow::Result<()> {
             response.check().await?;
             log::warn!("Removed: {nexus_uri}");
         }
-        Commands::List { format, nexus_uri } => {
+        Commands::List { recurse, format, nexus_uri } => {
             let nexus = crate::nexus_public_client()?;
-            cmd_list::cmd_list(format, &nexus_uri, nexus).await?;
+            cmd_list::cmd_list(nexus, &nexus_uri, format, recurse).await?;
         }
     }
 
@@ -141,6 +141,9 @@ enum Commands {
     /// List a directory
     #[clap(name="ls")]
     List {
+        /// recurse into subdirectories
+        #[arg(long,short='R')]
+        recurse: bool,
         #[arg(long,default_value="short")]
         format: DirFormat,
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]

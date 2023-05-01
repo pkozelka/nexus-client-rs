@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use futures_util::StreamExt;
+use reqwest::{Method, Response};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, USER_AGENT};
-use reqwest::Method;
 use reqwest::redirect::Policy;
 use serde::de::DeserializeOwned;
 use tokio::fs::File;
@@ -21,6 +21,14 @@ pub struct NexusRequest<A> {
     pub content_type: &'static str,
     pub accept: &'static str,
     pub extractor: Box<Extractor<A>>,
+}
+
+pub struct RawRequest {
+    pub method: Method,
+    pub url_suffix: String,
+    pub body: String,
+    pub content_type: &'static str,
+    pub accept: &'static str,
 }
 
 impl<A: DeserializeOwned + 'static> NexusRequest<A> {
@@ -78,6 +86,7 @@ impl<A: DeserializeOwned> NexusResponse<A> {
 }
 
 /// https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
+#[derive(Clone)]
 pub struct NexusClient {
     base_url: Url,
     client: reqwest::Client,
@@ -112,6 +121,22 @@ impl NexusClient {
     }
 
     pub async fn execute<A: DeserializeOwned + 'static>(&self, request: NexusRequest<A>) -> anyhow::Result<NexusResponse<A>> {
+        let raw_request = RawRequest {
+            method: request.method,
+            url_suffix: request.url_suffix,
+            body: request.body,
+            content_type: request.content_type,
+            accept: request.accept,
+        };
+        let http_response = self.execute_raw(raw_request).await?;
+
+        Ok(NexusResponse {
+            raw_response: http_response,
+            extractor: request.extractor,
+        })
+    }
+
+    pub async fn execute_raw(&self, request: RawRequest) -> anyhow::Result<Response> {
         let url = self.base_url.join(&request.url_suffix)?;
         log::debug!("requesting: {} {url}", request.method);
         let http_request = self.client.request(request.method, url)
@@ -127,10 +152,7 @@ impl NexusClient {
         let http_response = http_request.send().await?;
         let content_length = http_response.content_length().unwrap_or(0);
         log::debug!("- received '{:?}' body, content-length = {content_length}", http_response.headers().get(CONTENT_TYPE));
-        Ok(NexusResponse {
-            raw_response: http_response,
-            extractor: request.extractor,
-        })
+        Ok(http_response)
     }
 
     pub async fn upload_file(&self, staged_repository_id: &str, file: &Path, path: &str) -> anyhow::Result<Url> {
