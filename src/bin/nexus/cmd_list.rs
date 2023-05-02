@@ -33,7 +33,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
         container: None,
         entries,
     }).await?;
-    let mut counter = 1;
+    let mut pending = 1;
     while let Some(chunk) = receiver.recv().await {
         if let Some(container) = chunk.container {
             log::debug!("CONTAINER: {container:?}");
@@ -45,7 +45,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
         files.into_iter().for_each(|entry| print_entry(format, entry));
         // recurse into subdirs
         for entry in subdirs {
-            counter += 1;
+            pending += 1;
             let nexus = nexus.clone();
             let sender = sender.clone();
             let repo_id = nexus_uri.repo_id.clone();
@@ -62,11 +62,11 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, format: Di
                         log::error!("Failed to retrieve directory: {e}");
                     }
                 }
-            }).await?;
+            });
         }
-        counter -= 1;
-        log::info!("counter: {counter}");
-        if counter == 0 { break }
+        pending -= 1;
+        log::debug!("pending: {pending}");
+        if pending == 0 { break }
     }
     Ok(())
 }
@@ -102,7 +102,10 @@ async fn fetch_dir(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyh
     Ok(response.parsed().await?)
 }
 
+/// TODO we have to get rid if `dyn` in the NexusRequest, in order to be able to use it instead of RawRequest.
+/// After doing so, this function can be fully replaced with the original [fetch_dir] one.
 async fn fetch_dir_for_recurse(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyhow::Result<Vec<DirEntry>> {
+    log::trace!("{remote_dir}  START:");
     let nexus_url_path = NexusRepository::nexus_readonly(repo_id).repo_path;
     let request = RawRequest {
         method: Method::GET,
@@ -114,6 +117,7 @@ async fn fetch_dir_for_recurse(nexus: &NexusClient, repo_id: &str, remote_dir: &
     let response = nexus.execute_raw(request).await?;
     let resp: NexusResponseData = serde_json::from_str(&response.text().await?)?;
     let dir: Vec<DirEntry> = serde_json::from_value(resp.data)?;
+    log::trace!("{remote_dir}  END.");
     Ok(dir)
 }
 
