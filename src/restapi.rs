@@ -51,14 +51,39 @@ impl StagingProfiles {
         )
     }
 
-    pub fn drop(profile_id_key: &str, repository_id: &str) -> NexusRequest<()> {
+
+    /// NOT WORKING - set repository's description.
+    /// It was reverse-engineered from OSSRH but it doesn't work even there.
+    /// Let's update once the real one is found.
+    pub fn describe(profile_id_key: &str, repository_id: &str, description: &str) -> NexusRequest<String> {
         // request body is too trivial to bother with JSON - TODO perhaps just fail on strange chars to prevent JSON injection
-        let json_body = format!(r##"{{"data": {{"stagedRepositoryId":"{repository_id}"}} }}"##);
+        let json_expr_description = if description.is_empty() {
+            "".to_string()
+        } else {
+            format!(r##", "description":"{}""##, json_escape(description))
+        };
+        let json_body = format!(r##"{{"data": {{"repositoryId":"{repository_id}"{json_expr_description}}}}}"##);
+        // response body is empty in OK case, otherwise we don't even get to parse it here
+        NexusRequest::json_json(Method::PUT,
+                                format!("/service/local/staging/profiles/{profile_id_key}"),
+                                json_body,
+                                |text| Ok(text.to_string()),
+        )
+    }
+
+    pub fn finish(profile_id_key: &str, repository_id: &str, description: &str) -> NexusRequest<String> {
+        // request body is too trivial to bother with JSON - TODO perhaps just fail on strange chars to prevent JSON injection
+        let json_expr_description = if description.is_empty() {
+            "".to_string()
+        } else {
+            format!(r##", "description":"{}""##, json_escape(description))
+        };
+        let json_body = format!(r##"{{"data": {{"stagedRepositoryId":"{repository_id}"{json_expr_description}}}}}"##);
         // response body is empty in OK case, otherwise we don't even get to parse it here
         NexusRequest::json_json(Method::POST,
-                                format!("/service/local/staging/profiles/{profile_id_key}/drop"),
+                                format!("/service/local/staging/profiles/{profile_id_key}/finish"),
                                 json_body,
-                                |_| Ok(()),
+                                |text| Ok(text.to_string()),
         )
     }
 
@@ -73,16 +98,20 @@ impl StagingProfiles {
         )
     }
 
-    pub fn finish(profile_id_key: &str, repository_id: &str) -> NexusRequest<String> {
+    pub fn drop(profile_id_key: &str, repository_id: &str) -> NexusRequest<()> {
         // request body is too trivial to bother with JSON - TODO perhaps just fail on strange chars to prevent JSON injection
         let json_body = format!(r##"{{"data": {{"stagedRepositoryId":"{repository_id}"}} }}"##);
         // response body is empty in OK case, otherwise we don't even get to parse it here
         NexusRequest::json_json(Method::POST,
-                                format!("/service/local/staging/profiles/{profile_id_key}/finish"),
+                                format!("/service/local/staging/profiles/{profile_id_key}/drop"),
                                 json_body,
-                                |text| Ok(text.to_string()),
+                                |_| Ok(()),
         )
     }
+}
+
+fn json_escape(text: &str) -> String {
+    text.replace("\"", "\\\"")
 }
 
 pub struct StagingRepositories;

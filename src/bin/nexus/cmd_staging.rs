@@ -132,6 +132,30 @@ target_groups={target_groups:?}
                 _ => panic!("Unsupported format: {format:?}"),
             }
         }
+        StagingCommands::RepoDescribe { profile_id, repository_id, description } => {
+            let nexus = crate::nexus_client()?;
+            let description = description.as_ref().map_or("", |s|s.as_str());
+            let request = StagingProfiles::describe(&profile_id, &repository_id, description);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
+        StagingCommands::RepoFinish { profile_id, repository_id, description } => {
+            let nexus = crate::nexus_client()?;
+            let description = description.as_ref().map_or("", |s|s.as_str());
+            let request = StagingProfiles::finish(&profile_id, &repository_id, description);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
+
+        StagingCommands::RepoPromote { profile_id, repository_id } => {
+            let nexus = crate::nexus_client()?;
+            let request = StagingProfiles::promote(&profile_id, &repository_id);
+            let response = nexus.execute(request).await?;
+            let s = response.text().await?;
+            println!("{s:?}");
+        }
         StagingCommands::RepoDrop { profile_id, repository_ids } => {
             if repository_ids.is_empty() {
                 anyhow::bail!("Nothing to drop!");
@@ -142,21 +166,6 @@ target_groups={target_groups:?}
                 response.check().await?;
                 log::warn!("Staging repository with profile '{profile_id}' was successfully dropped: {repository_id}");
             }
-        }
-        StagingCommands::RepoPromote { profile_id, repository_id } => {
-            let nexus = crate::nexus_client()?;
-            let request = StagingProfiles::promote(&profile_id, &repository_id);
-            let response = nexus.execute(request).await?;
-            let s = response.text().await?;
-            println!("{s:?}");
-        }
-
-        StagingCommands::RepoFinish { profile_id, repository_id } => {
-            let nexus = crate::nexus_client()?;
-            let request = StagingProfiles::finish(&profile_id, &repository_id);
-            let response = nexus.execute(request).await?;
-            let s = response.text().await?;
-            println!("{s:?}");
         }
     }
     Ok(())
@@ -191,13 +200,37 @@ pub enum StagingCommands {
     #[command(name = "start")]
     RepoStart {
         // TODO: make profile_id optional, defaulting to single profile existing
-        // TODO: profile_id could also come from an env var
         // TODO: allow profile id syntax: `@name` to select profile by its name
         #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
         profile_id: String,
         #[arg(long, default_value = "short")]
         format: DirFormat,
         description: Option<String>,
+    },
+    /// Finish (close) staging repository, exposing it to others for consuming.
+    /// Hidden until a working solution is found.
+    #[clap(hide(true))]
+    #[command(name = "desc")]
+    RepoDescribe {
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
+        profile_id: String,
+        repository_id: String,
+        description: Option<String>,
+    },
+    /// Finish (close) staging repository, exposing it to others for consuming
+    #[command(name = "finish")]
+    RepoFinish {
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
+        profile_id: String,
+        repository_id: String,
+        description: Option<String>,
+    },
+    /// Promote (release) staging repository into the target repository (typically `releases`)
+    #[command(name = "promote")]
+    RepoPromote {
+        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
+        profile_id: String,
+        repository_id: String,
     },
     /// Drop staging repository
     #[command(name = "drop")]
@@ -206,19 +239,5 @@ pub enum StagingCommands {
         profile_id: String,
         // TODO: allow repository id syntax: `@desc=string` to select repo by description (must resolve to only one)
         repository_ids: Vec<String>,
-    },
-    /// Promote (close) staging repository, exposing it to others for consuming
-    #[command(name = "promote")]
-    RepoPromote {
-        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
-        profile_id: String,
-        repository_id: String,
-    },
-    /// Finish (release) staging repository into the target repository (typically `releases`)
-    #[command(name = "finish")]
-    RepoFinish {
-        #[arg(short, long, env = "NEXUS_STAGING_PROFILE")]
-        profile_id: String,
-        repository_id: String,
     },
 }
