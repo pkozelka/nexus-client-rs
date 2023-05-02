@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use cmd_staging::StagingCommands;
 use nexus_client::{http_upload, NexusClient, NexusRepository};
 
+use crate::cmd_list::DirPrinter;
 use crate::nexus_uri::NexusRemoteUri;
 
 mod cmd_staging;
@@ -82,9 +83,20 @@ async fn main() -> anyhow::Result<()> {
             response.check().await?;
             log::warn!("Removed: {nexus_uri}");
         }
-        Commands::List { recurse, format, nexus_uri } => {
+        Commands::List { recurse, format, long, nexus_uri } => {
             let nexus = crate::nexus_public_client()?;
-            cmd_list::cmd_list(nexus, &nexus_uri, format, recurse).await?;
+            if format == DirFormat::Json {
+                let request = NexusRepository::nexus_readonly(&nexus_uri.repo_id)
+                    .list(&nexus_uri.repo_path);
+                let response = nexus.execute(request).await?;
+                let json = response.text().await?;
+                println!("{json}");
+                return Ok(());
+            }
+            let dir_printer = DirPrinter {
+                format: if long { DirFormat::Long } else { format },
+            };
+            cmd_list::cmd_list(nexus, &nexus_uri, dir_printer, recurse).await?;
         }
     }
 
@@ -146,6 +158,9 @@ enum Commands {
         recurse: bool,
         #[arg(long,default_value="short")]
         format: DirFormat,
+        /// shortcut for `--format=long`
+        #[arg(short,long)]
+        long: bool,
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
