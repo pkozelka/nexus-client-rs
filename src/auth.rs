@@ -32,7 +32,7 @@ pub fn get_credentials(nexus_url: &Url) -> anyhow::Result<(String, String)> {
             Ok(line) => Some(line)
         })
         .collect::<Vec<String>>()
-        .join("");
+        .join("\n");
 
     let netrc = netrc_rs::Netrc::parse(s, false).unwrap();
     for machine in &netrc.machines {
