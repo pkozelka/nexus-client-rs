@@ -3,6 +3,8 @@ use reqwest::Response;
 
 pub use auth::get_credentials;
 pub use auth::nexus_url;
+pub use client::http_get_file;
+pub use client::http_put_file;
 pub use client::NexusClient;
 pub use client::RawRequest;
 pub use remote_sync::http_upload;

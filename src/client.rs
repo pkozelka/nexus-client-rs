@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use futures_util::StreamExt;
-use reqwest::{Method, Response};
+use reqwest::{Client, Method, Response};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, USER_AGENT};
 use reqwest::redirect::Policy;
 use serde::de::DeserializeOwned;
@@ -96,7 +96,7 @@ impl NexusClient {
     pub fn login(base_url: Url, user: &str, password: &str) -> anyhow::Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, "https://github.com/pkozelka/nexus-client-rs".parse()?);
-        headers.insert(AUTHORIZATION,  util::basic_auth(user, Some(password)));
+        headers.insert(AUTHORIZATION, util::basic_auth(user, Some(password)));
         let client = reqwest::Client::builder()
             .redirect(Policy::none())
             .default_headers(headers)
@@ -156,38 +156,49 @@ impl NexusClient {
     }
 
     pub async fn upload_file(&self, staged_repository_id: &str, file: &Path, path: &str) -> anyhow::Result<Url> {
-        let mut file = File::open(file).await?;
-        let mut vec = Vec::new();
-        file.read_to_end(&mut vec).await?;
-        let length = file.metadata().await?.len();
         let url = self.base_url.join(&format!("/service/local/staging/deployByRepositoryId/{staged_repository_id}{path}"))?;
-        log::debug!("uploading(PUT) to: {url}");
-        let http_req = self.client.request(Method::PUT, url.clone())
-            .header(CONTENT_LENGTH, length)
-            .body(vec)
-            .build()?;
-        let http_response = self.client.execute(http_req).await?;
-        crate::check_status(http_response).await?;
+        let client = &self.client;
+        http_put_file(client, &url, file).await;
         Ok(url)
     }
 
     pub async fn download_file(&self, staged_repository_id: &str, local_file: &Path, path: &str) -> anyhow::Result<Url> {
         if let Some(dir) = local_file.parent() {
-            if ! dir.exists() {
+            if !dir.exists() {
                 anyhow::bail!("Directory does not exist: {}", dir.display());
             }
         }
         let url = self.base_url.join(&format!("/service/local/repositories/{staged_repository_id}/content{path}"))?;
-        log::debug!("downloading(GET) from: {url}");
-        let http_response = self.client.request(Method::GET, url.clone())
-            .send().await?;
-        let http_response = crate::check_status(http_response).await?;
-        let mut stream = http_response.bytes_stream();
-        log::trace!("Creating file: {}", local_file.display());
-        let mut file = File::create(local_file).await?;
-        while let Some(chunk) = stream.next().await {
-            file.write(&chunk?).await?;
-        }
+        http_get_file(&self.client, &url, local_file).await?;
         Ok(url)
     }
+}
+
+pub async fn http_put_file(client: &Client, url: &Url, file: &Path) -> anyhow::Result<()> {
+    let mut file = File::open(file).await?;
+    let mut vec = Vec::new();
+    file.read_to_end(&mut vec).await?;
+    let length = file.metadata().await?.len();
+    log::debug!("uploading(PUT) to: {url}");
+    let http_req = client.request(Method::PUT, url.clone())
+        .header(CONTENT_LENGTH, length)
+        .body(vec)
+        .build()?;
+    let http_response = client.execute(http_req).await?;
+    crate::check_status(http_response).await?;
+    Ok(())
+}
+
+pub async fn http_get_file(client: &Client, url: &Url, local_file: &Path) -> anyhow::Result<()> {
+    log::debug!("downloading(GET) from: {url}");
+    let http_response = client.request(Method::GET, url.clone())
+        .send().await?;
+    let http_response = crate::check_status(http_response).await?;
+    let mut stream = http_response.bytes_stream();
+    log::trace!("Creating file: {}", local_file.display());
+    let mut file = File::create(local_file).await?;
+    while let Some(chunk) = stream.next().await {
+        file.write(&chunk?).await?;
+    }
+    Ok(())
 }
