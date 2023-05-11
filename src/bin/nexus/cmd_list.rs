@@ -1,9 +1,7 @@
 use std::cmp::Ordering;
 
-use reqwest::Method;
-
-use nexus_client::{NexusClient, NexusRepository, RawRequest};
-use nexus_client::model::{DirEntry, NexusResponseData};
+use nexus_client::{NexusClient, remote_sync};
+use nexus_client::model::DirEntry;
 
 use crate::DirFormat;
 use crate::nexus_uri::NexusRemoteUri;
@@ -11,7 +9,7 @@ use crate::nexus_uri::NexusRemoteUri;
 pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, dir_printer: DirPrinter, recurse: bool) -> anyhow::Result<()> {
     let remote_dir = nexus_uri.repo_path_dir_or_err()?;
     // Non-recursive
-    let mut entries = fetch_dir(&nexus, &nexus_uri.repo_id, remote_dir).await?;
+    let mut entries = remote_sync::fetch_dir(&nexus, &nexus_uri.repo_id, remote_dir).await?;
     if !recurse {
         entries.sort_unstable_by(by_text);
         let (files, subdirs) = split_files_subdirs(entries);
@@ -44,7 +42,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, dir_printe
             let remote_dir = entry.relative_path.clone();
             tokio::spawn(async move {
                 log::debug!("Listing for {remote_dir}");
-                match fetch_dir_for_recurse(&nexus, &repo_id, &entry.relative_path).await {
+                match remote_sync::fetch_dir_for_recurse(&nexus, &repo_id, &entry.relative_path).await {
                     Ok(entries) => {
                         if let Err(e) = sender.send(DirChunk { container: Some(entry), entries }).await {
                             log::error!("FATAL: Channel cannot send chunk: {e}");
@@ -67,32 +65,6 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, dir_printe
 struct DirChunk {
     container: Option<DirEntry>,
     entries: Vec<DirEntry>,
-}
-
-async fn fetch_dir(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyhow::Result<Vec<DirEntry>> {
-    let request = NexusRepository::nexus_readonly(repo_id)
-        .list(remote_dir);
-    let response = nexus.execute(request).await?;
-    Ok(response.parsed().await?)
-}
-
-/// TODO we have to get rid if `dyn` in the NexusRequest, in order to be able to use it instead of RawRequest.
-/// After doing so, this function can be fully replaced with the original [fetch_dir] one.
-async fn fetch_dir_for_recurse(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyhow::Result<Vec<DirEntry>> {
-    log::trace!("{remote_dir}  START:");
-    let nexus_url_path = NexusRepository::nexus_readonly(repo_id).repo_path;
-    let request = RawRequest {
-        method: Method::GET,
-        url_suffix: format!("{nexus_url_path}{remote_dir}"),
-        body: Default::default(),
-        content_type: "application/json",
-        accept: "application/json",
-    };
-    let response = nexus.execute_raw(request).await?;
-    let resp: NexusResponseData = serde_json::from_str(&response.text().await?)?;
-    let dir: Vec<DirEntry> = serde_json::from_value(resp.data)?;
-    log::trace!("{remote_dir}  END.");
-    Ok(dir)
 }
 
 fn split_files_subdirs(directory: Vec<DirEntry>) -> (Vec<DirEntry>, Vec<DirEntry>) {

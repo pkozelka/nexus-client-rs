@@ -158,7 +158,7 @@ impl NexusClient {
     pub async fn upload_file(&self, staged_repository_id: &str, file: &Path, path: &str) -> anyhow::Result<Url> {
         let url = self.base_url.join(&format!("/service/local/staging/deployByRepositoryId/{staged_repository_id}{path}"))?;
         let client = &self.client;
-        http_put_file(client, &url, file).await;
+        http_put_file(client, &url, file).await?;
         Ok(url)
     }
 

@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 
 use cmd_staging::StagingCommands;
 use nexus_client::{http_upload, NexusClient, NexusRepository};
+use nexus_client::remote_sync::http_download_tree;
 
 use crate::cmd_list::DirPrinter;
 use crate::nexus_uri::NexusRemoteUri;
@@ -27,9 +28,12 @@ async fn main() -> anyhow::Result<()> {
             log::info!("downloading {local_path:?} from {nexus_uri}");
             let nexus = nexus_public_client()?;
             match (local_path.is_dir(), nexus_uri.is_dir()) {
-                (true, true) => {
+                (local_is_dir, true) => {
+                    if !local_is_dir {
+                        std::fs::create_dir_all(local_path)?;
+                    }
                     // tree download
-                    todo!("tree download")
+                    http_download_tree(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;
                 }
                 (local_is_dir, false) => {
                     // single file download
@@ -45,7 +49,6 @@ async fn main() -> anyhow::Result<()> {
                     let url = nexus.download_file(&nexus_uri.repo_id, &local_path, &nexus_uri.repo_path).await?;
                     log::info!("File {} downloaded from {url}", local_path.display());
                 }
-                (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir} -> remotedir({remote_is_dir}))")
             }
         },
         Commands::Upload { local_path, nexus_uri} => {
@@ -69,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
                     let url = nexus.upload_file(&nexus_uri.repo_id, &local_path, &remote_path).await?;
                     log::info!("File {} uploaded to {url}", local_path.display());
                 }
-                (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir} -> remotedir({remote_is_dir}))")
+                (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir}) -> remotedir({remote_is_dir})")
             }
         },
         Commands::Remove { nexus_uri } => {

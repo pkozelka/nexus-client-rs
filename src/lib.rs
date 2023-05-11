@@ -16,7 +16,7 @@ mod auth;
 mod util;
 mod client;
 mod restapi;
-mod remote_sync;
+pub mod remote_sync;
 
 async fn check_status(response: Response) -> anyhow::Result<Response> {
     let status = response.status();
