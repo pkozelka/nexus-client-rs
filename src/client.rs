@@ -165,7 +165,7 @@ impl NexusClient {
     pub async fn download_file(&self, staged_repository_id: &str, local_file: &Path, path: &str) -> anyhow::Result<Url> {
         if let Some(dir) = local_file.parent() {
             if !dir.exists() {
-                anyhow::bail!("Directory does not exist: {}", dir.display());
+                anyhow::bail!("Directory does not exist: {} for file {:?}", dir.display(), local_file.file_name());
             }
         }
         let url = self.base_url.join(&format!("/service/local/repositories/{staged_repository_id}/content{path}"))?;

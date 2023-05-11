@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
             match (local_path.is_dir(), nexus_uri.is_dir()) {
                 (local_is_dir, true) => {
                     if !local_is_dir {
-                        std::fs::create_dir_all(local_path)?;
+                        std::fs::create_dir_all(&local_path)?;
                     }
                     // tree download
                     http_download_tree(&nexus, &nexus_uri.repo_id, &nexus_uri.repo_path, &local_path).await?;

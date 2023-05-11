@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use reqwest::Method;
 use tokio::spawn;
@@ -28,6 +28,14 @@ pub async fn http_upload(nexus: &NexusClient, repository_id: &str, remote_root: 
     Ok(())
 }
 
+async fn download_op(nexus: NexusClient, repo_id: String, rpath: String, local_path: PathBuf) -> anyhow::Result<()> {
+    log::info!("Download {}::{} \t-> {}", repo_id, rpath,  local_path.display());
+    nexus.download_file(&repo_id, &local_path, &rpath).await?;
+    // http_get_file(client, furl, file).await?;
+    log::debug!("downloaded {}", rpath);
+    Ok(())
+}
+
 pub async fn http_download_tree(nexus: &NexusClient, repo_id: &str, remote_dir: &str, local_dir: &Path) -> anyhow::Result<()> {
     let local_dir = local_dir.canonicalize()?;
     log::info!("local_dir: {}", local_dir.display());
@@ -35,36 +43,46 @@ pub async fn http_download_tree(nexus: &NexusClient, repo_id: &str, remote_dir: 
     let mut handles = Vec::new();
     // let r = NexusRepository::nexus_readonly(repo_id);
 
-    let mut remote_dirs= Vec::new();
+    let mut remote_dirs = Vec::new();
     remote_dirs.push(remote_dir.to_string());
     while let Some(remote_dir) = remote_dirs.pop() {
         log::info!("REMOTE_DIR: {remote_dir}");
         let dir = fetch_dir_for_recurse(nexus, repo_id, &remote_dir).await?;
+        for entry in &dir {
+            let local_path = local_dir.join(&entry.relative_path[1..]);
+            if !entry.leaf {
+                log::info!("--> REMOTE_DIR: {} (local: {})", entry.relative_path, local_path.display());
+                if !local_path.exists() {
+                    if let Err(e) = std::fs::create_dir_all(&local_path) {
+                        log::error!("this failed: {} with '{e}'", local_path.display());
+                    }
+                }
+                remote_dirs.push(entry.relative_path.clone());
+            }
+        }
         for entry in dir {
             let local_path = local_dir.join(&entry.relative_path[1..]);
             if entry.leaf {
-                let repo_id = repo_id.to_string();
-                let nexus = nexus.clone();
-                handles.push(spawn(async move {
-                    let rpath = &entry.relative_path;
-                    log::info!("Download {}::{} \t-> {}", repo_id, rpath, local_path.display());
-                    nexus.download_file(&repo_id, &local_path, rpath).await.unwrap();
-                    // http_get_file(client, furl, file).await?;
-                    log::debug!("downloaded {}", rpath);
-                }));
-            } else {
-                log::info!("--> REMOTE_DIR: {} (local: {})", entry.relative_path, local_path.display());
-                if !local_path.exists() {
-                    std::fs::create_dir(local_path)?;
-                }
-                remote_dirs.push(entry.relative_path);
+                handles.push(spawn(download_op(nexus.clone(),
+                                               repo_id.to_string(),
+                                               entry.relative_path.clone(),
+                                               local_path)));
             }
         }
     }
+    let mut errors = Vec::new();
     for handle in handles {
-        handle.await?;
+        if let Err(e) = handle.await? {
+            log::error!("{e}");
+            errors.push(e);
+        }
     }
-    Ok(())
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        log::error!("{} errors encountered, proceeding with first", errors.len());
+        Err(errors.pop().unwrap())
+    }
 }
 
 pub async fn fetch_dir(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyhow::Result<Vec<DirEntry>> {
