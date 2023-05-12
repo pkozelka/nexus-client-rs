@@ -2,8 +2,9 @@ use std::path::{Path, PathBuf};
 
 use reqwest::Method;
 use tokio::spawn;
+use tokio::task::JoinHandle;
 
-use crate::{http_get_file, NexusClient, NexusRepository, RawRequest};
+use crate::{NexusClient, NexusRepository, RawRequest};
 use crate::model::{DirEntry, NexusResponseData};
 
 /// Full blind upload of a directory
@@ -29,54 +30,51 @@ pub async fn http_upload(nexus: &NexusClient, repository_id: &str, remote_root: 
 }
 
 async fn download_op(nexus: NexusClient, repo_id: String, rpath: String, local_path: PathBuf) -> anyhow::Result<()> {
-    log::info!("Download {}::{} \t-> {}", repo_id, rpath,  local_path.display());
+    log::debug!("Downloading {}::{} \t-> {}", repo_id, rpath,  local_path.display());
     nexus.download_file(&repo_id, &local_path, &rpath).await?;
     // http_get_file(client, furl, file).await?;
     log::debug!("downloaded {}", rpath);
     Ok(())
 }
 
-pub async fn http_download_tree(nexus: &NexusClient, repo_id: &str, remote_dir: &str, local_dir: &Path) -> anyhow::Result<()> {
-    let local_dir = local_dir.canonicalize()?;
-    log::info!("local_dir: {}", local_dir.display());
-    // nexus.download_file()
-    let mut handles = Vec::new();
-    // let r = NexusRepository::nexus_readonly(repo_id);
-
-    let mut remote_dirs = Vec::new();
-    remote_dirs.push(remote_dir.to_string());
-    while let Some(remote_dir) = remote_dirs.pop() {
-        log::info!("REMOTE_DIR: {remote_dir}");
-        let dir = fetch_dir_for_recurse(nexus, repo_id, &remote_dir).await?;
-        for entry in &dir {
-            let local_path = local_dir.join(&entry.relative_path[1..]);
-            if !entry.leaf {
-                log::info!("--> REMOTE_DIR: {} (local: {})", entry.relative_path, local_path.display());
-                if !local_path.exists() {
-                    if let Err(e) = std::fs::create_dir_all(&local_path) {
-                        log::error!("this failed: {} with '{e}'", local_path.display());
-                    }
-                }
-                remote_dirs.push(entry.relative_path.clone());
-            }
+pub async fn http_download_tree(nexus: &NexusClient, repo_id: &str, remote_root: &str, local_root: &Path) -> anyhow::Result<()> {
+    let mut handles: Vec<JoinHandle<anyhow::Result<()>>> = Vec::new();
+    let mut subdirs = Vec::new();
+    subdirs.push("".to_string());
+    while let Some(subdir) = subdirs.pop() {
+        let local_path = local_root.join(&subdir);
+        if !local_path.exists() {
+            tokio::fs::create_dir(local_path).await?;
         }
-        for entry in dir {
-            let local_path = local_dir.join(&entry.relative_path[1..]);
+        // subdir: either empty, or has trailing slash; never leading slash
+        let remote_dir = format!("{remote_root}{subdir}");
+        let entries = fetch_dir_for_recurse(nexus, repo_id, &remote_dir).await?;
+        for entry in &entries {
             if entry.leaf {
+                let subpath = format!("{subdir}{}", entry.text);
+                let local_path = local_root.join(&subpath);
+                let remote_path = format!("{remote_root}{subpath}");
                 handles.push(spawn(download_op(nexus.clone(),
                                                repo_id.to_string(),
-                                               entry.relative_path.clone(),
+                                               remote_path,
                                                local_path)));
+            } else {
+                let subpath = format!("{subdir}{}/", entry.text);
+                subdirs.push(subpath);
             }
         }
     }
     let mut errors = Vec::new();
+    let mut cnt = 0;
     for handle in handles {
         if let Err(e) = handle.await? {
             log::error!("{e}");
             errors.push(e);
+        } else {
+            cnt += 1;
         }
     }
+    log::info!("Downloaded {cnt} files from ::/{repo_id}{remote_root} to {}/", local_root.display());
     if errors.is_empty() {
         Ok(())
     } else {
@@ -92,7 +90,7 @@ pub async fn fetch_dir(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> 
     Ok(response.parsed().await?)
 }
 
-/// TODO we have to get rid if `dyn` in the NexusRequest, in order to be able to use it instead of RawRequest.
+/// TODO we have to get rid of `dyn` in the NexusRequest, in order to be able to use it instead of RawRequest.
 /// After doing so, this function can be fully replaced with the original [fetch_dir] one.
 pub async fn fetch_dir_for_recurse(nexus: &NexusClient, repo_id: &str, remote_dir: &str) -> anyhow::Result<Vec<DirEntry>> {
     log::trace!("{remote_dir}  START:");
