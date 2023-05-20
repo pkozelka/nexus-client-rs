@@ -33,7 +33,7 @@ impl FromStr for NexusRemoteUri {
             anyhow::bail!("Nexus remote URI must start with '{REPO_PATH_START}'");
         }
         let s = &s[REPO_PATH_START.len()..];
-        let (repo_id,repo_path) = match s.find('/') {
+        let (repo_id, repo_path) = match s.find('/') {
             None => anyhow::bail!("Missing separator '/' in remote path specification"),
             Some(index) => (s[..index].trim(), &s[index..])
         };

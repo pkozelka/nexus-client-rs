@@ -11,18 +11,18 @@ pub struct PromoteRequest {
 #[derive(Default, Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromoteRequestData {
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub staged_repository_id: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub target_repository_id: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DirEntry {
-    #[serde(rename="resourceURI")]
+    #[serde(rename = "resourceURI")]
     pub resource_uri: String,
     pub relative_path: String,
     pub text: String,
@@ -128,7 +128,7 @@ pub struct StagingActivity {
     pub name: String,
     pub started: String,
     pub stopped: String,
-    pub events: Vec<StagingActivityEvent>
+    pub events: Vec<StagingActivityEvent>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]

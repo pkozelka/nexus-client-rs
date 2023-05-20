@@ -134,7 +134,7 @@ target_groups={target_groups:?}
         }
         StagingCommands::RepoDescribe { profile_id, repository_id, description } => {
             let nexus = crate::nexus_client()?;
-            let description = description.as_ref().map_or("", |s|s.as_str());
+            let description = description.as_ref().map_or("", |s| s.as_str());
             let request = StagingProfiles::describe(&profile_id, &repository_id, description);
             let response = nexus.execute(request).await?;
             let s = response.text().await?;
@@ -142,7 +142,7 @@ target_groups={target_groups:?}
         }
         StagingCommands::RepoFinish { profile_id, repository_id, description } => {
             let nexus = crate::nexus_client()?;
-            let description = description.as_ref().map_or("", |s|s.as_str());
+            let description = description.as_ref().map_or("", |s| s.as_str());
             let request = StagingProfiles::finish(&profile_id, &repository_id, description);
             let response = nexus.execute(request).await?;
             let s = response.text().await?;

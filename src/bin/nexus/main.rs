@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
                     let local_path = if local_is_dir {
                         let file_name = match nexus_uri.repo_path.rfind("/") {
                             None => panic!("There must always be at least one slash: {nexus_uri}"),
-                            Some(index) => &nexus_uri.repo_path[index+1..]
+                            Some(index) => &nexus_uri.repo_path[index + 1..]
                         };
                         local_path.join(file_name)
                     } else {
@@ -47,8 +47,8 @@ async fn main() -> anyhow::Result<()> {
                     log::info!("File {} downloaded from {url}", local_path.display());
                 }
             }
-        },
-        Commands::Upload { local_path, nexus_uri} => {
+        }
+        Commands::Upload { local_path, nexus_uri } => {
             log::info!("uploading {local_path:?} to {nexus_uri}");
             let nexus = nexus_client()?;
             // dir-dir checking TODO perhaps move this into upload function?
@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 (local_is_dir, remote_is_dir) => anyhow::bail!("Unsupported transfer: localdir({local_is_dir}) -> remotedir({remote_is_dir})")
             }
-        },
+        }
         Commands::Remove { nexus_uri } => {
             //TODO if not --force, require the repository to be open and non-transitioning
             //TODO support wildcards?
@@ -123,7 +123,7 @@ fn nexus_public_client() -> anyhow::Result<NexusClient> {
 
 /// Sonatype Nexus Unofficial Client
 #[derive(Parser)]
-#[command(author, version, about, long_about = None, bin_name="nexus")]
+#[command(author, version, about, long_about = None, bin_name = "nexus")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -134,34 +134,34 @@ enum Commands {
     /// Download repository - entire or a subtree
     Download {
         local_path: PathBuf,
-        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        #[arg(value_parser = clap::value_parser ! (NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
     /// Upload local dir to a repository
     Upload {
         local_path: PathBuf,
-        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        #[arg(value_parser = clap::value_parser ! (NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
     /// List a directory in a remote repository
-    #[clap(name="ls")]
+    #[clap(name = "ls")]
     List {
         /// recurse into subdirectories
-        #[arg(long,short='R')]
+        #[arg(long, short = 'R')]
         recurse: bool,
-        #[arg(long,default_value="short")]
+        #[arg(long, default_value = "short")]
         format: DirFormat,
         /// shortcut for `--format=long`
-        #[arg(short,long)]
+        #[arg(short, long)]
         long: bool,
-        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        #[arg(value_parser = clap::value_parser ! (NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
 
     /// Remove a path on remote repo (file of directory with its contents)
-    #[clap(name="rm")]
+    #[clap(name = "rm")]
     Remove {
-        #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
+        #[arg(value_parser = clap::value_parser ! (NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
     /// Manage staging repositories.

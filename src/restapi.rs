@@ -144,15 +144,15 @@ impl StagingRepositories {
     //TODO more elegant solution would be great here
     pub fn activity_xml(staged_repository_id: &str) -> NexusRequest<String> {
         NexusRequest::xml_xml(Method::GET,
-                                format!("/service/local/staging/repository/{staged_repository_id}/activity"),
-                                "".to_string(),
-                                |text| Ok(text.to_string()),
+                              format!("/service/local/staging/repository/{staged_repository_id}/activity"),
+                              "".to_string(),
+                              |text| Ok(text.to_string()),
         )
     }
 }
 
 pub struct NexusRepository {
-    pub/*todo just for now*/ repo_path: String,
+    pub /*todo just for now*/ repo_path: String,
 }
 
 const STAGING_PREFIX: &str = "@staging:";
@@ -185,7 +185,7 @@ impl NexusRepository {
             body: "".to_string(),
             content_type: "",
             accept: "",
-            extractor: Box::new(|_|Ok(())),
+            extractor: Box::new(|_| Ok(())),
         }
     }
 

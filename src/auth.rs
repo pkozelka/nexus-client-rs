@@ -21,7 +21,7 @@ pub fn get_credentials(nexus_url: &Url) -> anyhow::Result<(String, String)> {
             Ok((user.to_string(), password.to_string()))
         } else {
             anyhow::bail!("Invalid auth string in NEXUS_AUTH variable")
-        }
+        };
     }
     let file = File::open("/home/pk/.netrc")?;
     let file = BufReader::new(&file);

@@ -15,7 +15,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, dir_printe
         let (files, subdirs) = split_files_subdirs(entries);
         dir_printer.print_dir(&subdirs);
         dir_printer.print_dir(&files);
-        return Ok(())
+        return Ok(());
     }
 
     let (sender, mut receiver) = tokio::sync::mpsc::channel::<DirChunk>(1000);
@@ -56,7 +56,7 @@ pub async fn cmd_list(nexus: NexusClient, nexus_uri: &NexusRemoteUri, dir_printe
         }
         pending -= 1;
         log::debug!("pending: {pending}");
-        if pending == 0 { break }
+        if pending == 0 { break; }
     }
     Ok(())
 }
@@ -98,7 +98,7 @@ impl DirPrinter {
             DirFormat::Short => {
                 let leaf = if entry.leaf { "" } else { "/" };
                 println!("{}{leaf}", entry.text)
-            },
+            }
             DirFormat::Long => {
                 let size_or_dir = if entry.size_on_disk == -1 {
                     "/".to_string()
@@ -106,9 +106,8 @@ impl DirPrinter {
                     format!("{}", entry.size_on_disk)
                 };
                 println!("{}\t{size_or_dir:>10}\t{}", entry.last_modified, &entry.relative_path[1..])
-            },
+            }
             format => panic!("Unknown format: {format:?}"),
         }
     }
-
 }
