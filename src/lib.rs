@@ -1,3 +1,5 @@
+//! Implementation of REST API defined at https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
+//!
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Response;
 

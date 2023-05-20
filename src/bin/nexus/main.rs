@@ -121,7 +121,7 @@ fn nexus_public_client() -> anyhow::Result<NexusClient> {
     Ok(NexusClient::anonymous(nexus_client::nexus_url()?)?)
 }
 
-/// Simple program to greet a person
+/// Sonatype Nexus Unofficial Client
 #[derive(Parser)]
 #[command(author, version, about, long_about = None, bin_name="nexus")]
 struct Cli {
@@ -129,28 +129,21 @@ struct Cli {
     command: Commands,
 }
 
-// https://oss.sonatype.org/nexus-staging-plugin/default/docs/index.html
 #[derive(Subcommand)]
 enum Commands {
-    /// Manage staging repositories.
-    /// Only for Nexus instances with "staging plugin" configured.
-    Staging {
-        #[command(subcommand)]
-        staging_command: StagingCommands,
-    },
+    /// Download repository - entire or a subtree
     Download {
         local_path: PathBuf,
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
-
+    /// Upload local dir to a repository
     Upload {
         local_path: PathBuf,
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
     },
-
-    /// List a directory
+    /// List a directory in a remote repository
     #[clap(name="ls")]
     List {
         /// recurse into subdirectories
@@ -170,5 +163,11 @@ enum Commands {
     Remove {
         #[arg(value_parser = clap::value_parser!(NexusRemoteUri))]
         nexus_uri: NexusRemoteUri,
+    },
+    /// Manage staging repositories.
+    /// Only for Nexus instances with "staging plugin" configured.
+    Staging {
+        #[command(subcommand)]
+        staging_command: StagingCommands,
     },
 }
