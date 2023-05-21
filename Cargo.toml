@@ -19,6 +19,7 @@ tokio = { version = "1.27.0", features = ["full"] }
 serde-xml-rs = "0.6.0"
 futures-util = "0.3.28"
 walkdir = "2.3.3"
+dirs = "5.0.1"
 
 # https://stackoverflow.com/questions/66585798/how-to-avoid-dependency-on-libssl-so-10-and-libcrypto-so-10
 [dependencies.openssl]
