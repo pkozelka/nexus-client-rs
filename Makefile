@@ -37,3 +37,6 @@ in-docker-run: docker-build
 
 nexus-staging-repos:
 	make in-docker-run DO="nexus staging repos"
+
+install-just:
+	cargo install --git https://github.com/casey/just just

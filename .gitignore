@@ -1,6 +1,7 @@
 *.iml
 *.ipr
 *.iws
+.env
 .idea
 target
 .DS_Store
