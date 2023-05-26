@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "resourceURI": "https://oss.sonatype.org/service/local/repositories/aih2o-2249/content/A/B/",
+      "relativePath": "/A/B/",
+      "text": "B",
+      "leaf": false,
+      "lastModified": "2023-04-18 11:10:48.0 UTC",
+      "sizeOnDisk": -1
+    }
+  ]
+}

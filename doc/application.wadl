@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wadl:application xmlns:wadl="http://wadl.dev.java.net/2009/02" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <wadl:doc xmlns:enunciate="http://enunciate.codehaus.org/" enunciate:generatedBy="Enunciate-1.26.1"/>
+  <wadl:grammars>
+    <wadl:include href="ns0.xsd"/>
+  </wadl:grammars>
+  <wadl:resources base="http://localhost:8080/nexus-staging-plugin">
+    <wadl:resource path="/service/local/staging/bundle_upload">
+      <wadl:method name="PUT">
+        <wadl:doc>
+          <![CDATA[Handles the uploaded bundle files (multiple of them).]]>
+        </wadl:doc>
+      </wadl:method>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Handles the uploaded bundle files (multiple of them).]]>
+        </wadl:doc>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profile_evaluate">
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns information about corresponding profile matching the given repository type and Maven GAV.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:param name="t" style="query">
+            <wadl:doc>
+              <![CDATA[- repository type. One of "maven1" or "maven2"]]>
+            </wadl:doc>
+          </wadl:param>
+          <wadl:param name="g" style="query">
+            <wadl:doc>
+              <![CDATA[- group id]]>
+            </wadl:doc>
+          </wadl:param>
+          <wadl:param name="a" style="query">
+            <wadl:doc>
+              <![CDATA[- artifact id]]>
+            </wadl:doc>
+          </wadl:param>
+          <wadl:param name="v" style="query">
+            <wadl:doc>
+              <![CDATA[- version]]>
+            </wadl:doc>
+          </wadl:param>
+          <wadl:param name="m" style="query">
+            <wadl:doc>
+              <![CDATA[- (optional) staging mode. One of "DEPLOY", "UPLOAD", "BOTH" or "GROUP". Defaults to "DEPLOY"]]>
+            </wadl:doc>
+          </wadl:param>
+        </wadl:request>
+        <wadl:response>
+          <wadl:doc>
+            <![CDATA[list of staging profiles matching the repository type/ GAV]]>
+          </wadl:doc>
+          <wadl:representation mediaType="application/xml" element="stagingProfiles"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profile_order">
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Changes the order of the profiles.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="orderRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="orderRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profile_repositories">
+      <wadl:method name="GET">
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRepositories"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles">
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns the list of existing staging profiles.]]>
+        </wadl:doc>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingProfiles"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Creates a new staging profile.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="profileRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="profileResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/rule_sets">
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns the list of existing rule sets.]]>
+        </wadl:doc>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSets"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Updates an existing ruleSet.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSetRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSetResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/rule_types">
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns the list of rule types supported.]]>
+        </wadl:doc>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRuleTypes"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profile_repositories/{profileIdKey}">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="GET">
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRepositories"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles/{profileIdKey}">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns the staging profile by given profileId.]]>
+        </wadl:doc>
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="profileResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="PUT">
+        <wadl:doc>
+          <![CDATA[Updates an already existing staging profile.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="profileRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="profileResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="DELETE">
+        <wadl:doc>
+          <![CDATA[Deletes the staging profile associated with given profileId.]]>
+        </wadl:doc>
+        <wadl:request/>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/repository/{repositoryIdKey}">
+      <wadl:param name="repositoryIdKey" style="template"/>
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Get a repository by id.]]>
+        </wadl:doc>
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="PUT">
+        <wadl:doc>
+          <![CDATA[Update a repository by id.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/rule_sets/{ruleSetIdKey}">
+      <wadl:param name="ruleSetIdKey" style="template"/>
+      <wadl:method name="GET">
+        <wadl:doc>
+          <![CDATA[Returns the given rule set identified by ruleSetId.]]>
+        </wadl:doc>
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSetResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="PUT">
+        <wadl:doc>
+          <![CDATA[Updates the given rule set identified by ruleSetId.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSetRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="stagingRuleSetResponse"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+      <wadl:method name="DELETE">
+        <wadl:doc>
+          <![CDATA[Deletes the given rule set identified by ruleSetId.]]>
+        </wadl:doc>
+        <wadl:request/>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profile_repositories/tree/{groupRepoId}">
+      <wadl:param name="groupRepoId" style="template"/>
+      <wadl:method name="GET">
+        <wadl:request>
+          <wadl:representation mediaType="*/*"/>
+          <wadl:representation mediaType="application/xml"/>
+        </wadl:request>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml" element="content"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles/{profileIdKey}/drop">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Entry point to trigger staging repository drop (remove repository and it's contents without promoting it).]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="promoteRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles/{profileIdKey}/finish">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Entry point to trigger staging repository close (finish deploy and close staging repository).]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="promoteRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles/{profileIdKey}/promote">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Entry point to trigger staging repository promotion.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="promoteRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/profiles/{profileIdKey}/start">
+      <wadl:param name="profileIdKey" style="template"/>
+      <wadl:method name="POST">
+        <wadl:doc>
+          <![CDATA[Entry point to trigger staging repository creation.]]>
+        </wadl:doc>
+        <wadl:request>
+          <wadl:representation mediaType="application/xml" element="promoteRequest"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:request>
+      </wadl:method>
+    </wadl:resource>
+    <wadl:resource path="/service/local/staging/repository/{repositoryIdKey}/activity">
+      <wadl:param name="repositoryIdKey" style="template"/>
+      <wadl:method name="GET">
+        <wadl:request/>
+        <wadl:response>
+          <wadl:representation mediaType="application/xml"/>
+          <wadl:representation mediaType="application/json"/>
+        </wadl:response>
+      </wadl:method>
+    </wadl:resource>
+  </wadl:resources>
+</wadl:application>

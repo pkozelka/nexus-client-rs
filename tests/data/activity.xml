@@ -1,0 +1,28 @@
+<list>
+  <stagingActivity>
+    <name>open</name>
+    <started>2023-04-15T00:36:42.043Z</started>
+    <stopped>2023-04-15T00:36:46.711Z</stopped>
+    <events>
+      <stagingActivityEvent>
+        <timestamp>2023-04-15T00:36:45.669Z</timestamp>
+        <name>repositoryCreated</name>
+        <severity>0</severity>
+        <properties>
+          <stagingProperty>
+            <name>id</name>
+            <value>aih2o-2226</value>
+          </stagingProperty>
+          <stagingProperty>
+            <name>user</name>
+            <value>mmalohlava</value>
+          </stagingProperty>
+          <stagingProperty>
+            <name>ip</name>
+            <value>38.32.112.203</value>
+          </stagingProperty>
+        </properties>
+      </stagingActivityEvent>
+    </events>
+  </stagingActivity>
+</list>

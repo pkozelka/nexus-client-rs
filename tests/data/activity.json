@@ -1,0 +1,28 @@
+[
+    {
+        "name": "open",
+        "started": "2023-04-23T00:03:34.909Z",
+        "stopped": "2023-04-23T00:03:39.484Z",
+        "events": [
+            {
+                "timestamp": "2023-04-23T00:03:38.505Z",
+                "name": "repositoryCreated",
+                "severity": 0,
+                "properties": [
+                    {
+                        "name": "id",
+                        "value": "aih2o-2280"
+                    },
+                    {
+                        "name": "user",
+                        "value": "mmalohlava"
+                    },
+                    {
+                        "name": "ip",
+                        "value": "38.32.112.203"
+                    }
+                ]
+            }
+        ]
+    }
+]

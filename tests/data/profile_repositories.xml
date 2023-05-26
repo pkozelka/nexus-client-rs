@@ -1,0 +1,124 @@
+<stagingRepositories>
+  <data>
+    <stagingProfileRepository>
+      <profileId>3ce9ff9ad792da</profileId>
+      <profileName>ai.h2o</profileName>
+      <profileType>repository</profileType>
+      <repositoryId>aih2o-2220</repositoryId>
+      <type>open</type>
+      <policy>release</policy>
+      <userId>mmalohlava</userId>
+      <userAgent>Gradle/7.2 (Linux;5.15.0-53-generic;amd64) (Oracle Corporation;1.8.0_342;25.342-b07)</userAgent>
+      <ipAddress>38.32.112.203</ipAddress>
+      <repositoryURI>https://oss.sonatype.org/content/repositories/aih2o-2220</repositoryURI>
+      <created>2023-04-13T18:48:36.906Z</created>
+      <createdDate>Thu Apr 13 18:48:36 UTC 2023</createdDate>
+      <createdTimestamp>1681411716906</createdTimestamp>
+      <updated>2023-04-13T18:48:40.624Z</updated>
+      <updatedDate>Thu Apr 13 18:48:40 UTC 2023</updatedDate>
+      <updatedTimestamp>1681411720624</updatedTimestamp>
+      <description>Implicitly created (auto staging).</description>
+      <provider>maven2</provider>
+      <releaseRepositoryId>releases</releaseRepositoryId>
+      <releaseRepositoryName>Releases</releaseRepositoryName>
+      <notifications>0</notifications>
+      <transitioning>false</transitioning>
+    </stagingProfileRepository>
+    <stagingProfileRepository>
+      <profileId>3ce9ff9ad792da</profileId>
+      <profileName>ai.h2o</profileName>
+      <profileType>repository</profileType>
+      <repositoryId>aih2o-2221</repositoryId>
+      <type>open</type>
+      <policy>release</policy>
+      <userId>mmalohlava</userId>
+      <userAgent>Gradle/7.2 (Linux;4.15.0-166-generic;amd64) (Oracle Corporation;1.8.0_342;25.342-b07)</userAgent>
+      <ipAddress>38.32.112.203</ipAddress>
+      <repositoryURI>https://oss.sonatype.org/content/repositories/aih2o-2221</repositoryURI>
+      <created>2023-04-13T21:07:59.286Z</created>
+      <createdDate>Thu Apr 13 21:07:59 UTC 2023</createdDate>
+      <createdTimestamp>1681420079286</createdTimestamp>
+      <updated>2023-04-13T21:08:02.989Z</updated>
+      <updatedDate>Thu Apr 13 21:08:02 UTC 2023</updatedDate>
+      <updatedTimestamp>1681420082989</updatedTimestamp>
+      <description>Implicitly created (auto staging).</description>
+      <provider>maven2</provider>
+      <releaseRepositoryId>releases</releaseRepositoryId>
+      <releaseRepositoryName>Releases</releaseRepositoryName>
+      <notifications>0</notifications>
+      <transitioning>false</transitioning>
+    </stagingProfileRepository>
+    <stagingProfileRepository>
+      <profileId>3ce9ff9ad792da</profileId>
+      <profileName>ai.h2o</profileName>
+      <profileType>repository</profileType>
+      <repositoryId>aih2o-2222</repositoryId>
+      <type>open</type>
+      <policy>release</policy>
+      <userId>mmalohlava</userId>
+      <userAgent>Gradle/7.2 (Linux;5.15.0-46-generic;amd64) (Oracle Corporation;1.8.0_342;25.342-b07)</userAgent>
+      <ipAddress>38.32.112.203</ipAddress>
+      <repositoryURI>https://oss.sonatype.org/content/repositories/aih2o-2222</repositoryURI>
+      <created>2023-04-14T00:43:04.149Z</created>
+      <createdDate>Fri Apr 14 00:43:04 UTC 2023</createdDate>
+      <createdTimestamp>1681432984149</createdTimestamp>
+      <updated>2023-04-14T00:43:08.654Z</updated>
+      <updatedDate>Fri Apr 14 00:43:08 UTC 2023</updatedDate>
+      <updatedTimestamp>1681432988654</updatedTimestamp>
+      <description>Implicitly created (auto staging).</description>
+      <provider>maven2</provider>
+      <releaseRepositoryId>releases</releaseRepositoryId>
+      <releaseRepositoryName>Releases</releaseRepositoryName>
+      <notifications>0</notifications>
+      <transitioning>false</transitioning>
+    </stagingProfileRepository>
+    <stagingProfileRepository>
+      <profileId>3ce9ff9ad792da</profileId>
+      <profileName>ai.h2o</profileName>
+      <profileType>repository</profileType>
+      <repositoryId>aih2o-2223</repositoryId>
+      <type>open</type>
+      <policy>release</policy>
+      <userId>mmalohlava</userId>
+      <userAgent>Gradle/7.2 (Linux;5.15.0-67-generic;amd64) (Oracle Corporation;1.8.0_342;25.342-b07)</userAgent>
+      <ipAddress>38.32.112.203</ipAddress>
+      <repositoryURI>https://oss.sonatype.org/content/repositories/aih2o-2223</repositoryURI>
+      <created>2023-04-14T11:17:46.315Z</created>
+      <createdDate>Fri Apr 14 11:17:46 UTC 2023</createdDate>
+      <createdTimestamp>1681471066315</createdTimestamp>
+      <updated>2023-04-14T11:17:50.131Z</updated>
+      <updatedDate>Fri Apr 14 11:17:50 UTC 2023</updatedDate>
+      <updatedTimestamp>1681471070131</updatedTimestamp>
+      <description>Implicitly created (auto staging).</description>
+      <provider>maven2</provider>
+      <releaseRepositoryId>releases</releaseRepositoryId>
+      <releaseRepositoryName>Releases</releaseRepositoryName>
+      <notifications>0</notifications>
+      <transitioning>false</transitioning>
+    </stagingProfileRepository>
+    <stagingProfileRepository>
+      <profileId>3ce9ff9ad792da</profileId>
+      <profileName>ai.h2o</profileName>
+      <profileType>repository</profileType>
+      <repositoryId>aih2o-2224</repositoryId>
+      <type>open</type>
+      <policy>release</policy>
+      <userId>mmalohlava</userId>
+      <userAgent>Gradle/7.2 (Linux;5.15.0-67-generic;amd64) (Oracle Corporation;1.8.0_342;25.342-b07)</userAgent>
+      <ipAddress>12.51.196.147</ipAddress>
+      <repositoryURI>https://oss.sonatype.org/content/repositories/aih2o-2224</repositoryURI>
+      <created>2023-04-14T15:02:59.405Z</created>
+      <createdDate>Fri Apr 14 15:02:59 UTC 2023</createdDate>
+      <createdTimestamp>1681484579405</createdTimestamp>
+      <updated>2023-04-14T15:03:09.648Z</updated>
+      <updatedDate>Fri Apr 14 15:03:09 UTC 2023</updatedDate>
+      <updatedTimestamp>1681484589648</updatedTimestamp>
+      <description>Implicitly created (auto staging).</description>
+      <provider>maven2</provider>
+      <releaseRepositoryId>releases</releaseRepositoryId>
+      <releaseRepositoryName>Releases</releaseRepositoryName>
+      <notifications>0</notifications>
+      <transitioning>false</transitioning>
+    </stagingProfileRepository>
+  </data>
+</stagingRepositories>

@@ -1,0 +1,33 @@
+<stagingProfiles>
+  <data>
+    <stagingProfile>
+      <resourceURI>https://oss.sonatype.org/service/local/staging/profiles/3ce9ff9ad792da</resourceURI>
+      <id>3ce9ff9ad792da</id>
+      <name>ai.h2o</name>
+      <repositoryTemplateId>default_hosted_release</repositoryTemplateId>
+      <repositoryType>maven2</repositoryType>
+      <repositoryTargetId>3ce9fdbd6e4636</repositoryTargetId>
+      <inProgress>false</inProgress>
+      <order>6242</order>
+      <deployURI>https://oss.sonatype.org/service/local/staging/deploy/maven2</deployURI>
+      <targetGroups>
+        <string>staging</string>
+      </targetGroups>
+      <finishNotifyRoles/>
+      <promotionNotifyRoles/>
+      <dropNotifyRoles/>
+      <closeRuleSets>
+        <string>5e9e8e6f8d20a3</string>
+      </closeRuleSets>
+      <promoteRuleSets/>
+      <promotionTargetRepository>releases</promotionTargetRepository>
+      <mode>BOTH</mode>
+      <finishNotifyCreator>true</finishNotifyCreator>
+      <promotionNotifyCreator>true</promotionNotifyCreator>
+      <dropNotifyCreator>true</dropNotifyCreator>
+      <autoStagingDisabled>false</autoStagingDisabled>
+      <repositoriesSearchable>true</repositoriesSearchable>
+      <properties class="linked-hash-map"/>
+    </stagingProfile>
+  </data>
+</stagingProfiles>
