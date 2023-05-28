@@ -1,6 +1,5 @@
 {
     "name": "project-dev",
-    "image": "qmcgaw/rustdevcontainer",
     "dockerComposeFile": ["docker-compose.yml"],
     "service": "vscode",
     "runServices": ["vscode"],
